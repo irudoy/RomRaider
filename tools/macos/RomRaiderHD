@@ -1,0 +1,114 @@
+#!/bin/bash
+
+set -euo pipefail
+
+app_contents="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+runtime_dir="${app_contents}/Resources/RomRaiderHD"
+log_dir="${HOME}/.RomRaider"
+log_file="${log_dir}/romraider_sout.log"
+requested_theme="${ROMRAIDER_THEME:-auto}"
+
+mkdir -p "${log_dir}"
+
+if [[ -n "${ROMRAIDER_JAVA_HOME:-}" ]]; then
+	java_home="${ROMRAIDER_JAVA_HOME}"
+else
+	java_home="$(/usr/libexec/java_home -v 17+ -a arm64 2>/dev/null || true)"
+fi
+
+if [[ -z "${java_home}" || ! -x "${java_home}/bin/java" ]]; then
+	/usr/bin/osascript \
+		-e 'display alert "RomRaiderHD requires an ARM64 JDK 17." message "Install an ARM64 JDK 17 or newer, then start RomRaiderHD again." as critical' \
+		>/dev/null 2>&1 || true
+	exit 1
+fi
+
+java_properties="$("${java_home}/bin/java" \
+	-XshowSettings:properties -version 2>&1)"
+java_arch="$(/usr/bin/awk \
+	'$1 == "os.arch" { print $3; exit }' <<<"${java_properties}")"
+java_version="$(/usr/bin/awk \
+	'$1 == "java.version" { print $3; exit }' <<<"${java_properties}")"
+java_major="${java_version%%.*}"
+if [[ "${java_major}" == "1" ]]; then
+	java_remainder="${java_version#1.}"
+	java_major="${java_remainder%%.*}"
+fi
+if [[ "${java_arch}" != "aarch64" ||
+	! "${java_major}" =~ ^[0-9]+$ ||
+	"${java_major}" -lt 17 ]]; then
+	/usr/bin/osascript \
+		-e 'display alert "RomRaiderHD requires an ARM64 JDK 17." message "ROMRAIDER_JAVA_HOME must point to an ARM64 JDK 17 or newer." as critical' \
+		>/dev/null 2>&1 || true
+	exit 1
+fi
+
+if [[ ! -f "${runtime_dir}/RomRaider.jar" ]]; then
+	/usr/bin/osascript \
+		-e 'display alert "The RomRaiderHD runtime is incomplete." message "Reinstall RomRaiderHD with tools/macos/install-macos-app.sh." as critical' \
+		>/dev/null 2>&1 || true
+	exit 1
+fi
+
+effective_theme="${requested_theme}"
+case "${requested_theme}" in
+	auto)
+		effective_theme=light
+		if system_appearance="$(/usr/bin/defaults read -g AppleInterfaceStyle 2>/dev/null)"; then
+			if [[ "${system_appearance}" == "Dark" ]]; then
+				effective_theme=dark
+			fi
+		fi
+		;;
+	dark)
+		;;
+	light)
+		;;
+	*)
+		/usr/bin/osascript \
+			-e 'display alert "RomRaiderHD theme is invalid." message "Set ROMRAIDER_THEME to auto, dark, or light." as critical' \
+			>/dev/null 2>&1 || true
+		exit 1
+		;;
+esac
+
+theme_args=()
+native_appearance="NSAppearanceNameAqua"
+if [[ "${effective_theme}" == "dark" ]]; then
+	native_appearance="NSAppearanceNameDarkAqua"
+fi
+theme_args=(
+	-Dapple.awt.application.appearance="${native_appearance}"
+)
+if [[ "${effective_theme}" == "dark" ]]; then
+	theme_args+=(
+		-Dswing.systemlaf=com.romraider.theme.DarkNimbusLookAndFeel
+	)
+fi
+
+{
+	printf '\n[%s] Starting RomRaiderHD\n' "$(/bin/date -u '+%Y-%m-%dT%H:%M:%SZ')"
+	printf 'Java home: %s\n' "${java_home}"
+	printf 'Runtime: %s\n' "${runtime_dir}"
+	printf 'Theme: %s (effective: %s)\n' "${requested_theme}" "${effective_theme}"
+	printf 'Native appearance: %s\n' "${native_appearance}"
+	printf 'Retina rendering: Java %s AWT\n' "${java_version}"
+} >>"${log_file}"
+
+cd "${runtime_dir}"
+
+exec "${java_home}/bin/java" \
+	--add-opens=java.desktop/sun.awt=ALL-UNNAMED \
+	"${theme_args[@]}" \
+	-Dapple.awt.application.name=RomRaiderHD \
+	-Dapple.laf.useScreenMenuBar=true \
+	-Dcom.apple.macos.useScreenMenuBar=true \
+	-Djava.library.path=lib/linux/64 \
+	-Dsun.java2d.opengl=false \
+	-Xms64M \
+	-Xmx512M \
+	-XX:-UseParallelGC \
+	-XX:CompileThreshold=10000 \
+	-classpath 'RomRaider.jar:lib/common/*' \
+	com.romraider.theme.RomRaiderBootstrap \
+	"$@" >>"${log_file}" 2>&1

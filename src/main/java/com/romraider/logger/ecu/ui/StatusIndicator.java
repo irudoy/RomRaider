@@ -26,6 +26,7 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 
+import com.romraider.theme.HiDpiIconScaler;
 import com.romraider.util.ResourceUtil;
 
 import java.awt.BorderLayout;
@@ -41,10 +42,20 @@ public final class StatusIndicator extends JPanel implements StatusChangeListene
     private static final String TEXT_READING_EXTERNAL = rb.getString("READING_EXTERNAL");
     private static final String TEXT_LOGGING = rb.getString("LOGGING");
     private static final String TEXT_STOPPED = rb.getString("STOPPED");
-    private static final ImageIcon ICON_CONNECTING = new ImageIcon(StatusIndicator.class.getResource("/graphics/logger_blue.png"));
-    private static final ImageIcon ICON_READING = new ImageIcon(StatusIndicator.class.getResource("/graphics/logger_green.png"));
-    private static final ImageIcon ICON_LOGGING = new ImageIcon(StatusIndicator.class.getResource("/graphics/logger_recording.png"));
-    private static final ImageIcon ICON_STOPPED = new ImageIcon(StatusIndicator.class.getResource("/graphics/logger_stop.png"));
+    private static final ImageIcon ICON_CONNECTING = originalIcon(
+            "/graphics/logger_blue.png", 16, 16);
+    private static final ImageIcon ICON_READING = originalIcon(
+            "/graphics/logger_green.png", 16, 16);
+    private static final ImageIcon ICON_LOGGING = originalIcon(
+            "/graphics/logger_recording.png", 16, 17);
+    private static final ImageIcon ICON_STOPPED = originalIcon(
+            "/graphics/logger_stop.png", 20, 20);
+
+    private static ImageIcon originalIcon(String resource, int width,
+            int height) {
+        return HiDpiIconScaler.original(new ImageIcon(
+                StatusIndicator.class.getResource(resource)), width, height);
+    }
 
     public StatusIndicator() {
         setLayout(new BorderLayout());

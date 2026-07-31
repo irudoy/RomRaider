@@ -31,12 +31,14 @@ import javax.swing.ImageIcon;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTree;
+import javax.swing.UIManager;
 import javax.swing.tree.DefaultTreeCellRenderer;
 import javax.swing.tree.TreeCellRenderer;
 
 import com.romraider.maps.Rom;
 import com.romraider.maps.RomID;
 import com.romraider.maps.Table;
+import com.romraider.theme.HiDpiIconScaler;
 
 public class RomCellRenderer implements TreeCellRenderer {
 
@@ -44,10 +46,23 @@ public class RomCellRenderer implements TreeCellRenderer {
     JLabel carInfo;
     DefaultTreeCellRenderer defaultRenderer = new DefaultTreeCellRenderer();
     
-    static ImageIcon icon1D = new ImageIcon(RomCellRenderer.class.getResource("/graphics/1d.gif"));
-    static ImageIcon icon2D = new ImageIcon(RomCellRenderer.class.getResource("/graphics/2d.gif"));
-    static ImageIcon icon3D = new ImageIcon(RomCellRenderer.class.getResource("/graphics/3d.gif"));
-    static ImageIcon iconSwitch = new ImageIcon(RomCellRenderer.class.getResource("/graphics/switch.gif"));
+    static ImageIcon icon1D = HiDpiIconScaler.fixed(new ImageIcon(
+            RomCellRenderer.class.getResource("/graphics/1d.gif")), 20, 20);
+    static ImageIcon icon2D = HiDpiIconScaler.fixed(new ImageIcon(
+            RomCellRenderer.class.getResource("/graphics/2d.gif")), 20, 20);
+    static ImageIcon icon3D = HiDpiIconScaler.fixed(new ImageIcon(
+            RomCellRenderer.class.getResource("/graphics/3d.gif")), 20, 20);
+    static ImageIcon iconSwitch = HiDpiIconScaler.fixed(new ImageIcon(
+            RomCellRenderer.class.getResource("/graphics/switch.gif")), 20, 20);
+
+    private static ImageIcon detached(ImageIcon icon) {
+        return new ImageIcon(icon.getImage());
+    }
+
+    private static Color uiColor(String key, Color fallback) {
+        Color value = UIManager.getColor(key);
+        return value == null ? fallback : value;
+    }
     
     public RomCellRenderer() {
         fileName = new JLabel(" ");
@@ -62,24 +77,24 @@ public class RomCellRenderer implements TreeCellRenderer {
     public static ImageIcon getIconForTable(Table t) {   	
         // display icon
         if (t.getType() == Table.TableType.TABLE_1D) {
-        	return icon1D;
+            return detached(icon1D);
         } else if (t.getType() == Table.TableType.TABLE_2D) {
-        	return icon2D;     
+            return detached(icon2D);
         } else if (t.getType() == Table.TableType.TABLE_3D) {
-        	return icon3D;
+            return detached(icon3D);
         } else if (t.getType() == Table.TableType.SWITCH) {
-        	return iconSwitch;
+            return detached(iconSwitch);
         }
         
         return null;
     }
     
     private String buildCarInfoText(Rom rom) {
-    	String carInfoText = "<html>";
+        String carInfoText = "<html><nobr>";
         RomID id = rom.getRomID();
         
         if(id.getVersion() != null)
-        	carInfoText+= "<B><font color=blue>" + id.getVersion() + " </font></B>";
+            carInfoText+= "<B><font color=#73b7ff>" + id.getVersion() + " </font></B>";
         	
         if(rom.getRomIDString() != null)
         	carInfoText+=rom.getRomIDString() + ", ";
@@ -108,7 +123,7 @@ public class RomCellRenderer implements TreeCellRenderer {
         if(id.getAuthor() != null)
         	carInfoText+=" by " + id.getAuthor();
         
-        carInfoText+= "</html>";
+        carInfoText+= "</nobr></html>";
         
         return carInfoText;
     }
@@ -136,39 +151,59 @@ public class RomCellRenderer implements TreeCellRenderer {
             renderer.add(carInfo);
 
             if (selected) {
-                renderer.setBackground(new Color(220, 220, 255));
-                renderer.setBorder(createLineBorder(new Color(0, 0, 225)));
+                renderer.setBackground(uiColor(
+                        "Tree.selectionBackground", tree.getBackground()));
+                renderer.setBorder(createLineBorder(uiColor(
+                        "Tree.selectionBorderColor", tree.getForeground())));
+                fileName.setForeground(uiColor(
+                        "Tree.selectionForeground", tree.getForeground()));
+                carInfo.setForeground(uiColor(
+                        "Tree.selectionForeground", tree.getForeground()));
 
             } else {
-                renderer.setBorder(createLineBorder(new Color(220, 0, 0)));
-                renderer.setBackground(new Color(255, 210, 210));
+                renderer.setBorder(createLineBorder(tree.getBackground()));
+                renderer.setBackground(tree.getBackground());
+                fileName.setForeground(tree.getForeground());
+                carInfo.setForeground(tree.getForeground());
             }
 
-            renderer.setPreferredSize(new Dimension(tree.getParent().getWidth(), 30));
-            renderer.setMaximumSize(new Dimension(tree.getParent().getWidth(), 30));
+            int width = Math.max(
+                    tree.getParent().getWidth(),
+                    Math.max(fileName.getPreferredSize().width,
+                            carInfo.getPreferredSize().width));
+            int height = fileName.getPreferredSize().height
+                    + carInfo.getPreferredSize().height + 2;
+            renderer.setPreferredSize(new Dimension(width, height));
+            renderer.setMaximumSize(new Dimension(width, height));
             renderer.setEnabled(tree.isEnabled());
             returnValue = renderer;
         } else if (value != null && value instanceof TableTreeNode) {
 
             Table table = (Table) (((TableTreeNode)(value)).getUserObject());
             JPanel renderer = new JPanel(new GridLayout(1, 1));
-            renderer.setBorder(createLineBorder(Color.WHITE));
+            renderer.setBorder(createLineBorder(tree.getBackground()));
             JLabel tableName = new JLabel("");
-            renderer.setBackground(Color.WHITE);
-            
+            renderer.setBackground(tree.getBackground());
+
             tableName = new JLabel (table.getName() + " ", getIconForTable(table), JLabel.LEFT);
+            tableName.setForeground(tree.getForeground());
 
             // set color
             renderer.add(tableName);
             tableName.setFont(new Font("Tahoma", Font.PLAIN, 11));
 
             if (selected) {
-                renderer.setBackground(new Color(220, 220, 255));
-                renderer.setBorder(createLineBorder(new Color(0, 0, 225)));
+                renderer.setBackground(uiColor(
+                        "Tree.selectionBackground", tree.getBackground()));
+                renderer.setBorder(createLineBorder(uiColor(
+                        "Tree.selectionBorderColor", tree.getForeground())));
+                tableName.setForeground(uiColor(
+                        "Tree.selectionForeground", tree.getForeground()));
             }
 
             if (table.getUserLevel() == 5) {
-                tableName.setForeground(new Color(255, 150, 150));
+                tableName.setForeground(uiColor(
+                        "nimbusRed", new Color(204, 78, 78)));
                 tableName.setFont(new Font("Tahoma", Font.ITALIC, 11));
 
             } else if (table.getUserLevel() > table.getSettings().getUserLevel()) {

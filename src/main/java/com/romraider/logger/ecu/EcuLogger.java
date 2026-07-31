@@ -35,7 +35,6 @@ import static java.awt.BorderLayout.EAST;
 import static java.awt.BorderLayout.NORTH;
 import static java.awt.BorderLayout.SOUTH;
 import static java.awt.BorderLayout.WEST;
-import static java.awt.Color.BLACK;
 import static java.awt.Color.GREEN;
 import static java.awt.Color.RED;
 import static java.awt.Color.YELLOW;
@@ -61,6 +60,7 @@ import static javax.swing.SwingUtilities.invokeLater;
 import com.romraider.swing.menubar.RadioButtonMenuItem;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
@@ -75,7 +75,6 @@ import java.awt.event.FocusListener;
 import java.awt.event.WindowEvent;
 import java.beans.PropertyChangeEvent;
 import java.io.File;
-import java.net.URL;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -105,6 +104,7 @@ import javax.swing.JTabbedPane;
 import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.JToggleButton;
+import javax.swing.UIManager;
 import javax.swing.JWindow;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
@@ -192,6 +192,8 @@ import com.romraider.logger.external.core.ExternalDataSourceLoader;
 import com.romraider.logger.external.core.ExternalDataSourceLoaderImpl;
 import com.romraider.swing.AbstractFrame;
 import com.romraider.swing.SetFont;
+import com.romraider.theme.HiDpiIconScaler;
+import com.romraider.theme.MacNativeMenuBar;
 import com.romraider.util.FormatFilename;
 import com.romraider.util.ResourceUtil;
 import com.romraider.util.SettingsManager;
@@ -218,7 +220,6 @@ public final class EcuLogger extends AbstractFrame implements MessageListener {
     private static final String ECU_LOGGER_TITLE = PRODUCT_NAME + " v" + VERSION + " | " + rb.getString("TITLE");
     private static final String LOGGER_FULLSCREEN_ARG = "-logger.fullscreen";
     private static final String LOGGER_TOUCH_ARG = "-logger.touch";
-    private static final URL ICON_PATH =  Settings.class.getResource("/graphics/romraider-ico.gif");
     private static final String HEADING_PARAMETERS = "Parameters";
     private static final String HEADING_SWITCHES = "Switches";
     private static final String HEADING_EXTERNAL = "External";
@@ -468,6 +469,7 @@ public final class EcuLogger extends AbstractFrame implements MessageListener {
         ecuIdLabel = new JLabel(buildEcuInfoLabelText(target + " ID", null));
         statsLabel = buildStatsLabel();
         tabbedPane = new JTabbedPane(BOTTOM);
+        useReadableTabForeground(tabbedPane);
         portsComboBox = new SerialPortComboBox();
         dataHandlerManager = new DataUpdateHandlerManagerImpl();
         dataTabBroker = new DataRegistrationBrokerImpl(controller, dataHandlerManager);
@@ -526,7 +528,9 @@ public final class EcuLogger extends AbstractFrame implements MessageListener {
 
     private void initUserInterface() {
         // add menubar to frame
-        setJMenuBar(buildMenubar());
+        JMenuBar menuBar = buildMenubar();
+        setJMenuBar(menuBar);
+        MacNativeMenuBar.install(menuBar);
 
         // setup main panel
         JPanel mainPanel = new JPanel(new BorderLayout());
@@ -712,6 +716,7 @@ public final class EcuLogger extends AbstractFrame implements MessageListener {
                 boolean logToFile = (int) switchValue == 1;
                 if (getSettings().isFileLoggingControllerSwitchActive() && logToFile != oldDefogStatus) {
                     logToFileButton.setSelected(logToFile);
+                    updateFileLoggingButton(logToFile);
                     if (logToFile) {
                         fileUpdateHandler.start();
                     } else {
@@ -1090,6 +1095,9 @@ public final class EcuLogger extends AbstractFrame implements MessageListener {
 
     private void clearAllSelectedParameters(ParameterListTableModel paramListTableModel) {
         List<ParameterRow> rows = paramListTableModel.getParameterRows();
+        if (rows.isEmpty()) {
+            return;
+        }
         for (ParameterRow row : rows) {
             if (row.isSelected()) {
                 row.getLoggerData().setSelected(false);
@@ -1250,6 +1258,7 @@ public final class EcuLogger extends AbstractFrame implements MessageListener {
         JScrollPane externalList = new JScrollPane(buildParamListTable(externalListTableModel), VERTICAL_SCROLLBAR_AS_NEEDED, HORIZONTAL_SCROLLBAR_AS_NEEDED);
         JScrollPane switchList = new JScrollPane(buildParamListTable(switchListTableModel), VERTICAL_SCROLLBAR_AS_NEEDED, HORIZONTAL_SCROLLBAR_AS_NEEDED);
         JTabbedPane tabs = new JTabbedPane(JTabbedPane.TOP, JTabbedPane.SCROLL_TAB_LAYOUT);
+        useReadableTabForeground(tabs);
 
         if (touchEnabled == false)
         {
@@ -1264,6 +1273,23 @@ public final class EcuLogger extends AbstractFrame implements MessageListener {
             tabs.addTab("<html><body leftmargin=15 topmargin=15 marginwidth=15 marginheight=15>External Sensors</body></html>", externalList);
         }
         return tabs;
+    }
+
+    private static void useReadableTabForeground(JTabbedPane tabs) {
+        Color foreground = UIManager.getColor("TabbedPane.foreground");
+        if (foreground == null) {
+            foreground = UIManager.getColor("Label.foreground");
+        }
+        if (foreground != null) {
+            tabs.setForeground(new Color(
+                    foreground.getRed(), foreground.getGreen(),
+                    foreground.getBlue(), foreground.getAlpha()));
+        }
+    }
+
+    private static Color readableLabelForeground() {
+        Color foreground = UIManager.getColor("Label.foreground");
+        return foreground == null ? Color.BLACK : foreground;
     }
 
     private JTable buildParamListTable(ParameterListTableModel tableModel) {
@@ -1459,30 +1485,29 @@ public final class EcuLogger extends AbstractFrame implements MessageListener {
     private final Component buildLogToFileButton() {
         logToFileButton = new JToggleButton(
                 LOG_TO_FILE_START,
-                new ImageIcon(getClass().getResource(LOG_TO_FILE_ICON)));
+                HiDpiIconScaler.original(new ImageIcon(
+                        getClass().getResource(LOG_TO_FILE_ICON)), 16, 16));
         SetFont.plain(logToFileButton);
         if (touchEnabled == true)
         {
              logToFileButton.setPreferredSize(new Dimension(200, 50));
         }
         logToFileButton.setToolTipText(LOG_TO_FILE_TT_TEXT);
-        logToFileButton.setBackground(GREEN);
-        logToFileButton.setOpaque(true);
+        logToFileButton.setContentAreaFilled(false);
+        logToFileButton.setFocusPainted(false);
+        updateFileLoggingButton(false);
         logToFileButton.addActionListener(
             new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent actionEvent) {
                     if (logToFileButton.isSelected() && controller.isStarted()) {
                         fileUpdateHandler.start();
-                        logToFileButton.setBackground(RED);
-                        logToFileButton.setText(LOG_TO_FILE_STOP);
+                        updateFileLoggingButton(true);
                     }
                     else {
                         fileUpdateHandler.stop();
                         if (!controller.isStarted()) statusIndicator.stopped();
-                        logToFileButton.setBackground(GREEN);
-                        logToFileButton.setSelected(false);
-                        logToFileButton.setText(LOG_TO_FILE_START);
+                        updateFileLoggingButton(false);
                     }
                 }
             }
@@ -1493,6 +1518,20 @@ public final class EcuLogger extends AbstractFrame implements MessageListener {
         logToFileButton.getActionMap().put(
                 "toggleFileLogging", new ToggleButtonAction(this, logToFileButton));
         return logToFileButton;
+    }
+
+    private void updateFileLoggingButton(boolean logging) {
+        logToFileButton.setSelected(logging);
+        logToFileButton.setText(
+                logging ? LOG_TO_FILE_STOP : LOG_TO_FILE_START);
+        Color foreground = UIManager.getColor("Label.foreground");
+        if (foreground != null) {
+            logToFileButton.setForeground(new Color(
+                    foreground.getRed(), foreground.getGreen(),
+                    foreground.getBlue(), foreground.getAlpha()));
+        }
+        logToFileButton.setBorder(BorderFactory.createLineBorder(
+                logging ? RED : GREEN, 2, true));
     }
 
     private JPanel buildPortsComboBox() {
@@ -1512,7 +1551,8 @@ public final class EcuLogger extends AbstractFrame implements MessageListener {
 
         comboBoxPanel.add(moduleSelectPanel);
 
-        JButton reconnectButton = new JButton(new ImageIcon( getClass().getResource("/graphics/logger_restart.png")));
+        JButton reconnectButton = new JButton(HiDpiIconScaler.original(new ImageIcon(
+                getClass().getResource("/graphics/logger_restart.png")), 20, 20));
         componentList.put("reconnectButton", reconnectButton);
         if (touchEnabled == false)
         {
@@ -1536,7 +1576,8 @@ public final class EcuLogger extends AbstractFrame implements MessageListener {
             }
         });
         comboBoxPanel.add(reconnectButton);
-        JButton disconnectButton = new JButton(new ImageIcon( getClass().getResource("/graphics/logger_stop.png")));
+        JButton disconnectButton = new JButton(HiDpiIconScaler.original(new ImageIcon(
+                getClass().getResource("/graphics/logger_stop.png")), 20, 20));
         componentList.put("disconnectButton", disconnectButton);
         if (touchEnabled == false)
         {
@@ -1991,7 +2032,7 @@ public final class EcuLogger extends AbstractFrame implements MessageListener {
                 @Override
                 public void run() {
                     messageLabel.setText(message);
-                    messageLabel.setForeground(BLACK);
+                    messageLabel.setForeground(readableLabelForeground());
                 }
             });
         }
@@ -2016,7 +2057,7 @@ public final class EcuLogger extends AbstractFrame implements MessageListener {
 
     private JLabel buildStatsLabel() {
         JLabel label = new JLabel(" ");
-        label.setForeground(BLACK);
+        label.setForeground(readableLabelForeground());
         label.setHorizontalTextPosition(RIGHT);
         return label;
     }
@@ -2155,7 +2196,7 @@ public final class EcuLogger extends AbstractFrame implements MessageListener {
             GraphicsEnvironment env = GraphicsEnvironment.getLocalGraphicsEnvironment();
             GraphicsDevice device = env.getDefaultScreenDevice();
             JFrame frame = new JFrame(ecuLogger.getTitle());
-            frame.setIconImage(new ImageIcon(ICON_PATH).getImage());
+            frame.setIconImage(Version.ABOUT_ICON.getImage());
             frame.setContentPane(ecuLogger.getContentPane());
             frame.addWindowListener(ecuLogger);
             frame.setDefaultCloseOperation(defaultCloseOperation);
@@ -2165,7 +2206,7 @@ public final class EcuLogger extends AbstractFrame implements MessageListener {
         } else {
             // display in window
             ecuLogger.addWindowListener(ecuLogger);
-            ecuLogger.setIconImage(new ImageIcon(ICON_PATH).getImage());
+            ecuLogger.setIconImage(Version.ABOUT_ICON.getImage());
             ecuLogger.setSize(settings.getLoggerWindowSize());
             ecuLogger.setLocation(settings.getLoggerWindowLocation());
             if (settings.isLoggerWindowMaximized()) ecuLogger.setExtendedState(MAXIMIZED_BOTH);

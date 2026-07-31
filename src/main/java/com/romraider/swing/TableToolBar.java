@@ -20,12 +20,8 @@
 package com.romraider.swing;
 
 import static com.romraider.Settings.COMMA;
-import static javax.swing.BorderFactory.createLineBorder;
-
-import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
-import java.awt.Image;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
@@ -73,6 +69,7 @@ import com.romraider.maps.Table1DView;
 import com.romraider.maps.Table3D;
 import com.romraider.maps.TableView;
 import com.romraider.maps.UserLevelException;
+import com.romraider.theme.HiDpiIconScaler;
 import com.romraider.util.NumberUtil;
 import com.romraider.util.ResourceUtil;
 import com.romraider.util.SettingsManager;
@@ -119,7 +116,7 @@ public class TableToolBar extends JToolBar implements MouseListener, ItemListene
 
     public TableToolBar() {
         super(Settings.defaultTableToolBarName);
-        this.setFloatable(true);
+        this.setFloatable(false);
         this.setRollover(true);
         FlowLayout toolBarLayout = new FlowLayout(FlowLayout.LEFT, 0, 0);
         this.setLayout(toolBarLayout);
@@ -160,34 +157,34 @@ public class TableToolBar extends JToolBar implements MouseListener, ItemListene
         scaleSelectionPanel.add(scaleSelection);
         this.add(scaleSelectionPanel);
 
-        incrementFine.setBorder(createLineBorder(new Color(150, 150, 150), 1));
-        decrementFine.setBorder(createLineBorder(new Color(150, 150, 150), 1));
-        incrementCoarse.setBorder(createLineBorder(new Color(150, 150, 150), 1));
-        decrementCoarse.setBorder(createLineBorder(new Color(150, 150, 150), 1));
+        incrementFine.setBorder(BorderFactory.createEmptyBorder(1, 1, 1, 1));
+        decrementFine.setBorder(BorderFactory.createEmptyBorder(1, 1, 1, 1));
+        incrementCoarse.setBorder(BorderFactory.createEmptyBorder(1, 1, 1, 1));
+        decrementCoarse.setBorder(BorderFactory.createEmptyBorder(1, 1, 1, 1));
 
-        enable3d.setBorder(createLineBorder(new Color(150, 150, 150), 1));
+        enable3d.setBorder(BorderFactory.createEmptyBorder(1, 1, 1, 1));
         setValue.setPreferredSize(new Dimension(33, 23));
-        setValue.setBorder(createLineBorder(new Color(150, 150, 150), 1));
+        setValue.setBorder(BorderFactory.createEmptyBorder(1, 1, 1, 1));
         multiply.setPreferredSize(new Dimension(33, 23));
-        multiply.setBorder(createLineBorder(new Color(150, 150, 150), 1));
+        multiply.setBorder(BorderFactory.createEmptyBorder(1, 1, 1, 1));
 
-        colorCells.setBorder(createLineBorder(new Color(150, 150, 150), 1));
-        refreshCompare.setBorder(createLineBorder(new Color(150, 150, 150), 1));
+        colorCells.setBorder(BorderFactory.createEmptyBorder(1, 1, 1, 1));
+        refreshCompare.setBorder(BorderFactory.createEmptyBorder(1, 1, 1, 1));
 
-        scaleSelection.setPreferredSize(new Dimension(80, 23));
+        scaleSelection.setPreferredSize(new Dimension(120, 23));
 
-        clearOverlay.setPreferredSize(new Dimension(75, 23));
-        clearOverlay.setBorder(createLineBorder(new Color(150, 150, 150), 1));
+        clearOverlay.setPreferredSize(new Dimension(120, 23));
+        clearOverlay.setBorder(BorderFactory.createEmptyBorder(1, 1, 1, 1));
 
         incrementByFine.setAlignmentX(JTextArea.CENTER_ALIGNMENT);
         incrementByFine.setAlignmentY(JTextArea.CENTER_ALIGNMENT);
-        incrementByFine.setPreferredSize(new Dimension(45, 23));
+        incrementByFine.setPreferredSize(new Dimension(64, 23));
         incrementByCoarse.setAlignmentX(JTextArea.CENTER_ALIGNMENT);
         incrementByCoarse.setAlignmentY(JTextArea.CENTER_ALIGNMENT);
-        incrementByCoarse.setPreferredSize(new Dimension(45, 23));
+        incrementByCoarse.setPreferredSize(new Dimension(64, 23));
         setValueText.setAlignmentX(JTextArea.CENTER_ALIGNMENT);
         setValueText.setAlignmentY(JTextArea.CENTER_ALIGNMENT);
-        setValueText.setPreferredSize(new Dimension(45, 23));
+        setValueText.setPreferredSize(new Dimension(64, 23));
 
         incrementFine.setToolTipText(rb.getString("INCFTT"));
         decrementFine.setToolTipText(rb.getString("DECFTT"));
@@ -283,11 +280,7 @@ public class TableToolBar extends JToolBar implements MouseListener, ItemListene
     }
 
     private ImageIcon rescaleImageIcon(ImageIcon imageIcon, int percentOfOriginal) {
-        int newHeight = (int) (imageIcon.getImage().getHeight(this) * (percentOfOriginal * .01));
-        int newWidth = (int) (imageIcon.getImage().getWidth(this) * (percentOfOriginal * .01));
-
-        imageIcon.setImage(imageIcon.getImage().getScaledInstance(newWidth, newHeight, Image.SCALE_SMOOTH));
-        return imageIcon;
+        return HiDpiIconScaler.scale(imageIcon, percentOfOriginal);
     }
 
     @Override

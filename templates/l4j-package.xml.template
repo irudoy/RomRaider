@@ -16,7 +16,7 @@
     <icon>../../src/main/resources/graphics/romraider-ico.ico</icon>
     <jre>
         <path>../../3rdparty/jre</path>
-        <minVersion>1.6.0</minVersion>
+        <minVersion>17.0.0</minVersion>
         <maxVersion></maxVersion>
         <dontUsePrivateJres>false</dontUsePrivateJres>
         <initialHeapSize>0</initialHeapSize>

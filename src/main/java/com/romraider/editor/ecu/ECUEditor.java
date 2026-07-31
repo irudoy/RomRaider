@@ -20,6 +20,7 @@
 package com.romraider.editor.ecu;
 
 import static com.romraider.Version.ECU_DEFS_URL;
+import static com.romraider.Version.ABOUT_ICON;
 import static com.romraider.Version.PRODUCT_NAME;
 import static com.romraider.Version.VERSION;
 import static javax.swing.JOptionPane.DEFAULT_OPTION;
@@ -34,7 +35,6 @@ import static javax.swing.ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS;
 import static javax.swing.ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED;
 
 import java.awt.BorderLayout;
-import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
@@ -105,6 +105,8 @@ import com.romraider.swing.RomTreeRootNode;
 import com.romraider.swing.TableFrame;
 import com.romraider.swing.TableToolBar;
 import com.romraider.swing.TableTreeNode;
+import com.romraider.theme.MacNativeMenuBar;
+import com.romraider.theme.ThemePalette;
 import com.romraider.util.ResourceUtil;
 import com.romraider.util.SettingsManager;
 import com.romraider.util.ThreadUtil;
@@ -133,8 +135,7 @@ public class ECUEditor extends AbstractFrame {
     private final JPanel toolBarPanel = new JPanel();
     private OpenImageWorker openImageWorker;
     private SetUserLevelWorker setUserLevelWorker;
-    private final ImageIcon editorIcon = new ImageIcon(getClass().getResource(
-            "/graphics/romraider-ico.gif"), rb.getString("RRECUED"));
+    private final ImageIcon editorIcon = ABOUT_ICON;
     private final Settings settings = SettingsManager.getSettings();
 
     public ECUEditor() {
@@ -166,7 +167,7 @@ public class ECUEditor extends AbstractFrame {
         splitPane.setContinuousLayout(true);
         getContentPane().add(splitPane);
 
-        rightPanel.setBackground(Color.BLACK);
+        rightPanel.setBackground(ThemePalette.editorDesktopBackground());
         imageList.setScrollsOnExpand(true);
 
         this.add(statusPanel, BorderLayout.SOUTH);
@@ -187,6 +188,7 @@ public class ECUEditor extends AbstractFrame {
 
         menuBar = new ECUEditorMenuBar();
         this.setJMenuBar(menuBar);
+        MacNativeMenuBar.install(menuBar);
 
         // create toolbars
         toolBar = new ECUEditorToolBar(rb.getString("EDTOOLS"));

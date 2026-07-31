@@ -21,22 +21,38 @@ package com.romraider.swing;
 
 import static javax.swing.BorderFactory.createBevelBorder;
 
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Font;
+import java.awt.FontMetrics;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.Insets;
+import java.awt.RenderingHints;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.InputEvent;
+import java.awt.event.KeyEvent;
 import java.text.MessageFormat;
 import java.util.ResourceBundle;
 import java.util.Vector;
 
+import javax.swing.AbstractAction;
 import javax.swing.Icon;
+import javax.swing.JComponent;
 import javax.swing.JInternalFrame;
 import javax.swing.JMenu;
 import javax.swing.JOptionPane;
 import javax.swing.JRadioButtonMenuItem;
+import javax.swing.KeyStroke;
+import javax.swing.UIManager;
+import javax.swing.border.Border;
 import javax.swing.event.InternalFrameEvent;
 import javax.swing.event.InternalFrameListener;
 
 import com.romraider.Settings;
 import com.romraider.editor.ecu.ECUEditor;
+import com.romraider.theme.MacNativeMenuBar;
 import com.romraider.editor.ecu.ECUEditorManager;
 import com.romraider.logger.ecu.ui.handler.table.TableUpdateHandler;
 import com.romraider.maps.Rom;
@@ -50,8 +66,32 @@ public class TableFrame extends JInternalFrame implements InternalFrameListener,
     private static final long serialVersionUID = -2651279694660392351L;
     private static final ResourceBundle rb = new ResourceUtil().getBundle(
             TableFrame.class.getName());
+    private static final String CLOSE_MAP_ACTION = "romraider.closeMap";
+    private static final KeyStroke MAC_CLOSE_KEY = KeyStroke.getKeyStroke(
+            KeyEvent.VK_W, InputEvent.META_DOWN_MASK);
+    private static final int MAC_TITLE_LEFT_INSET = 65;
+    private static final int MAC_TITLE_RIGHT_INSET = 8;
+    private static final int MAC_TITLE_ICON_GAP = 5;
+    private static final int MAC_TITLE_ICON_SIZE = 15;
+    private static final Icon EMPTY_ICON = new Icon() {
+        @Override
+        public void paintIcon(
+                Component component, Graphics graphics, int x, int y) {
+        }
+
+        @Override
+        public int getIconWidth() {
+            return 0;
+        }
+
+        @Override
+        public int getIconHeight() {
+            return 0;
+        }
+    };
     private TableView tableView;
     private final TableMenuBar tableMenuBar;
+    private boolean paintingNativeChrome;
 
     public TableFrame(String title, TableView tableView) {
         super(title, true, true);
@@ -65,13 +105,213 @@ public class TableFrame extends JInternalFrame implements InternalFrameListener,
         add(tableView);
 
         setBorder(createBevelBorder(0));
-        if (System.getProperty("os.name").startsWith("Mac OS"))
+        if (isMac()) {
             putClientProperty("JInternalFrame.isPalette", true);
+            installRetinaTitleBorder();
+        }
         setVisible(false);
         tableMenuBar = new TableMenuBar(this);
         setJMenuBar(tableMenuBar);
+        MacNativeMenuBar.installInWindow(tableMenuBar);
+        installMacCloseShortcut();
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
         addInternalFrameListener(this);
+    }
+
+    @Override
+    public void updateUI() {
+        super.updateUI();
+        installRetinaTitleBorder();
+    }
+
+    @Override
+    public String getTitle() {
+        return paintingNativeChrome ? "" : super.getTitle();
+    }
+
+    @Override
+    public Icon getFrameIcon() {
+        return paintingNativeChrome ? EMPTY_ICON : super.getFrameIcon();
+    }
+
+    private void installMacCloseShortcut() {
+        if (!isMac()) {
+            return;
+        }
+        getRootPane().getInputMap(
+                JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT)
+                .put(MAC_CLOSE_KEY, CLOSE_MAP_ACTION);
+        getRootPane().getActionMap().put(
+                CLOSE_MAP_ACTION, new AbstractAction() {
+                    @Override
+                    public void actionPerformed(ActionEvent event) {
+                        tableMenuBar.getClose().doClick(0);
+                    }
+                });
+    }
+
+    private void setMacCloseShortcutActive(boolean active) {
+        if (!isMac()) {
+            return;
+        }
+        tableMenuBar.getClose().setAccelerator(
+                active ? MAC_CLOSE_KEY : null);
+        if (active) {
+            getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW)
+                    .put(MAC_CLOSE_KEY, CLOSE_MAP_ACTION);
+        } else {
+            getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW)
+                    .remove(MAC_CLOSE_KEY);
+        }
+    }
+
+    private void installRetinaTitleBorder() {
+        if (!isMac() || getUI() == null || getBorder() == null
+                || getBorder() instanceof RetinaTitleBorder
+                || !getUI().getClass().getName().startsWith("com.apple.laf.")) {
+            return;
+        }
+        setBorder(new RetinaTitleBorder(getBorder()));
+    }
+
+    private void paintRetinaTitle(
+            Graphics graphics, int x, int y, int width, int titleHeight) {
+        String title = super.getTitle();
+        if (title == null || title.isEmpty()) {
+            return;
+        }
+
+        Graphics2D g2 = (Graphics2D) graphics.create();
+        try {
+            g2.setRenderingHint(
+                    RenderingHints.KEY_TEXT_ANTIALIASING,
+                    RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+            g2.setRenderingHint(
+                    RenderingHints.KEY_FRACTIONALMETRICS,
+                    RenderingHints.VALUE_FRACTIONALMETRICS_ON);
+
+            Font font = getFont();
+            if (font == null) {
+                font = UIManager.getFont("InternalFrame.paletteTitleFont");
+            }
+            if (font == null) {
+                return;
+            }
+            g2.setFont(font.deriveFont(Font.BOLD));
+            FontMetrics metrics = g2.getFontMetrics();
+
+            Icon icon = super.getFrameIcon();
+            int iconWidth = icon == null ? 0
+                    : Math.min(icon.getIconWidth(), MAC_TITLE_ICON_SIZE);
+            int iconHeight = icon == null ? 0
+                    : Math.min(icon.getIconHeight(), MAC_TITLE_ICON_SIZE);
+            int iconGap = iconWidth == 0 ? 0 : MAC_TITLE_ICON_GAP;
+            int availableTextWidth = Math.max(
+                    0, width - MAC_TITLE_LEFT_INSET
+                            - MAC_TITLE_RIGHT_INSET - iconWidth - iconGap);
+            String visibleTitle =
+                    clippedTitle(title, metrics, availableTextWidth);
+            int textWidth = metrics.stringWidth(visibleTitle);
+            int contentWidth = iconWidth + iconGap + textWidth;
+            int contentX = x + Math.max(
+                    MAC_TITLE_LEFT_INSET, (width - contentWidth) / 2);
+
+            if (icon != null) {
+                paintTitleIcon(
+                        g2, icon, contentX,
+                        y + (titleHeight - iconHeight) / 2,
+                        iconWidth, iconHeight);
+            }
+
+            Color foreground =
+                    UIManager.getColor("InternalFrame.activeTitleForeground");
+            if (foreground == null) {
+                foreground = UIManager.getColor("Label.foreground");
+            }
+            if (foreground != null) {
+                g2.setColor(foreground);
+            }
+            int baseline = y + (titleHeight + metrics.getAscent()
+                    - metrics.getLeading() - metrics.getDescent()) / 2;
+            g2.drawString(
+                    visibleTitle, contentX + iconWidth + iconGap, baseline);
+        } finally {
+            g2.dispose();
+        }
+    }
+
+    private void paintTitleIcon(
+            Graphics2D graphics, Icon icon, int x, int y,
+            int width, int height) {
+        if (icon.getIconWidth() == width && icon.getIconHeight() == height) {
+            icon.paintIcon(this, graphics, x, y);
+            return;
+        }
+        Graphics2D scaled = (Graphics2D) graphics.create();
+        try {
+            scaled.translate(x, y);
+            scaled.scale(
+                    (double) width / icon.getIconWidth(),
+                    (double) height / icon.getIconHeight());
+            icon.paintIcon(this, scaled, 0, 0);
+        } finally {
+            scaled.dispose();
+        }
+    }
+
+    private static String clippedTitle(
+            String title, FontMetrics metrics, int availableWidth) {
+        if (metrics.stringWidth(title) <= availableWidth) {
+            return title;
+        }
+        String suffix = "...";
+        int suffixWidth = metrics.stringWidth(suffix);
+        if (suffixWidth > availableWidth) {
+            return "";
+        }
+        int end = title.length();
+        while (end > 0 && metrics.stringWidth(
+                title.substring(0, end)) + suffixWidth > availableWidth) {
+            end--;
+        }
+        return title.substring(0, end) + suffix;
+    }
+
+    private static boolean isMac() {
+        return System.getProperty("os.name", "").startsWith("Mac");
+    }
+
+    private final class RetinaTitleBorder implements Border {
+        private final Border nativeBorder;
+
+        private RetinaTitleBorder(Border nativeBorder) {
+            this.nativeBorder = nativeBorder;
+        }
+
+        @Override
+        public void paintBorder(
+                Component component, Graphics graphics,
+                int x, int y, int width, int height) {
+            paintingNativeChrome = true;
+            try {
+                nativeBorder.paintBorder(
+                        component, graphics, x, y, width, height);
+            } finally {
+                paintingNativeChrome = false;
+            }
+            Insets insets = nativeBorder.getBorderInsets(component);
+            paintRetinaTitle(graphics, x, y, width, insets.top);
+        }
+
+        @Override
+        public Insets getBorderInsets(Component component) {
+            return nativeBorder.getBorderInsets(component);
+        }
+
+        @Override
+        public boolean isBorderOpaque() {
+            return nativeBorder.isBorderOpaque();
+        }
     }
 
     public void RegisterTable() {
@@ -91,11 +331,13 @@ public class TableFrame extends JInternalFrame implements InternalFrameListener,
 
     @Override
     public void internalFrameActivated(InternalFrameEvent e) {
+        setMacCloseShortcutActive(true);
     	updateToolbar(getTable());
     }
 
     @Override
     public void internalFrameDeactivated(InternalFrameEvent e) {
+        setMacCloseShortcutActive(false);
     	updateToolbar(null);
     }
 
@@ -106,7 +348,9 @@ public class TableFrame extends JInternalFrame implements InternalFrameListener,
     public void internalFrameOpened(InternalFrameEvent e) {}
 
     @Override
-    public void internalFrameClosed(InternalFrameEvent e) {}
+    public void internalFrameClosed(InternalFrameEvent e) {
+        setMacCloseShortcutActive(false);
+    }
     @Override
     public void internalFrameIconified(InternalFrameEvent e) {}
     @Override

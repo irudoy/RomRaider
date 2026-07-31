@@ -163,7 +163,7 @@ public class DefinitionManager extends javax.swing.JFrame implements ActionListe
                                 .addGroup(layout.createParallelGroup(GroupLayout.Alignment.BASELINE)
                                         .addComponent(btnMoveUp)
                                         .addComponent(btnMoveDown)
-                                        .addComponent(btnRemoveDefinition, GroupLayout.PREFERRED_SIZE, 23, GroupLayout.PREFERRED_SIZE)
+                                        .addComponent(btnRemoveDefinition)
                                         .addComponent(btnAddDefinition))
                                 .addPreferredGap(LayoutStyle.ComponentPlacement.RELATED)
                                 .addGroup(layout.createParallelGroup(GroupLayout.Alignment.BASELINE)
@@ -174,6 +174,8 @@ public class DefinitionManager extends javax.swing.JFrame implements ActionListe
                                 .addContainerGap(GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                 );
         pack();
+        int titleBarInset = Math.max(12, getInsets().top);
+        setSize(getWidth(), getHeight() + titleBarInset);
     }// </editor-fold>//GEN-END:initComponents
 
     @Override

@@ -55,14 +55,47 @@
         <tstamp>
             <format property="time.rfc822" pattern="EEE, dd MMM yyyy HH:mm:ss Z" locale="en"/>
             <format property="time.year" pattern="yyyy" locale="en"/>
-            <format property="mnth.day" pattern="MMMdd" locale="en"/>
+            <format property="build.month" pattern="MM" locale="en"/>
+            <format property="build.day" pattern="dd" locale="en"/>
         </tstamp>
 
-        <scriptdef language="javascript" name="toUpper">
-            project.setProperty("mnth.day",
-                    project.getProperty("mnth.day").toUpperCase());
-        </scriptdef>
-        <toUpper/>
+        <!-- Keep release identifiers stable without the removed Nashorn runtime. -->
+        <condition property="mnth.day" value="JAN${build.day}">
+            <equals arg1="${build.month}" arg2="01" />
+        </condition>
+        <condition property="mnth.day" value="FEB${build.day}">
+            <equals arg1="${build.month}" arg2="02" />
+        </condition>
+        <condition property="mnth.day" value="MAR${build.day}">
+            <equals arg1="${build.month}" arg2="03" />
+        </condition>
+        <condition property="mnth.day" value="APR${build.day}">
+            <equals arg1="${build.month}" arg2="04" />
+        </condition>
+        <condition property="mnth.day" value="MAY${build.day}">
+            <equals arg1="${build.month}" arg2="05" />
+        </condition>
+        <condition property="mnth.day" value="JUN${build.day}">
+            <equals arg1="${build.month}" arg2="06" />
+        </condition>
+        <condition property="mnth.day" value="JUL${build.day}">
+            <equals arg1="${build.month}" arg2="07" />
+        </condition>
+        <condition property="mnth.day" value="AUG${build.day}">
+            <equals arg1="${build.month}" arg2="08" />
+        </condition>
+        <condition property="mnth.day" value="SEP${build.day}">
+            <equals arg1="${build.month}" arg2="09" />
+        </condition>
+        <condition property="mnth.day" value="OCT${build.day}">
+            <equals arg1="${build.month}" arg2="10" />
+        </condition>
+        <condition property="mnth.day" value="NOV${build.day}">
+            <equals arg1="${build.month}" arg2="11" />
+        </condition>
+        <condition property="mnth.day" value="DEC${build.day}">
+            <equals arg1="${build.month}" arg2="12" />
+        </condition>
 
         <!-- set os specific properties -->
         <property name="os.windows" value="windows" />
@@ -79,12 +112,8 @@
         </condition>
 
         <!-- java compiler properties -->
-        <property name="javac.source" value="1.6" />
-        <property name="javac.target" value="1.6" />
-        <condition property="bootclasspath.dir" value="${env.JRE_DIR}/lib"
-                           else="C:\Program Files (x86)\Java\jdk1.6.0_45\jre\lib">
-                    <isset property="env.JRE_DIR" />
-        </condition>
+        <property name="javac.source" value="17" />
+        <property name="javac.target" value="17" />
         <property name="debug" value="off" />
         <property name="deprecation" value="on" />
         <property name="javac.verbose" value="off" />
@@ -386,9 +415,6 @@
         <attribute name="classpathref" />
         <sequential>
             <mkdir dir="${classes.dir}" />
-            <path id="bootpath.ref">
-              <fileset dir="${bootclasspath.dir}" includes="*.jar"/>
-            </path>
             <javac
                 failonerror="true"
                 srcdir="@{srcdir}"
@@ -399,8 +425,7 @@
                 debug="${debug}"
                 verbose="${javac.verbose}"
                 deprecation="${deprecation}"
-                compiler="javac${javac.target}"
-                bootclasspath="${toString:bootpath.ref}"
+                compiler="modern"
                 encoding="UTF-8" >
                 <!--
                 <compilerarg value="-Xlint" />

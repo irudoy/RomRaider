@@ -56,7 +56,6 @@ import java.util.List;
 import java.util.Map;
 
 import javax.swing.ButtonGroup;
-import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
@@ -73,6 +72,7 @@ import javax.swing.border.TitledBorder;
 import com.romraider.Settings;
 import com.romraider.io.connection.ConnectionProperties;
 import com.romraider.io.protocol.Protocol;
+import com.romraider.Version;
 import com.romraider.io.protocol.ProtocolFactory;
 import com.romraider.io.serial.port.SerialPortRefresher;
 import com.romraider.logger.ecu.comms.io.protocol.LoggerProtocol;
@@ -522,7 +522,7 @@ public final class RamTuneTestApp extends AbstractFrame {
             @Override
             public void run() {
                 RamTuneTestApp ramTuneTestApp = new RamTuneTestApp("Control Module Read/Write");
-                ramTuneTestApp.setIconImage(new ImageIcon( getClass().getResource("/graphics/romraider-ico.gif")).getImage());
+                ramTuneTestApp.setIconImage(Version.ABOUT_ICON.getImage());
                 ramTuneTestApp.setDefaultCloseOperation(defaultCloseOperation);
                 ramTuneTestApp.addWindowListener(ramTuneTestApp);
                 ramTuneTestApp.setLocation(100, 50);

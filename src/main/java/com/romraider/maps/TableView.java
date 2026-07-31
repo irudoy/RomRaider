@@ -939,7 +939,7 @@ public abstract class TableView extends JPanel implements Serializable {
 
     @Override
     public String getName() {
-    	return table.getName();
+        return table == null ? super.getName() : table.getName();
     }
 
     public static void showBadScalePopup(Table table, Scale scale) {

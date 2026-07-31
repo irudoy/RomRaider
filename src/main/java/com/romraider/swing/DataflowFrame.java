@@ -34,7 +34,6 @@ import java.util.Map;
 
 import javax.swing.Box;
 import javax.swing.BoxLayout;
-import javax.swing.ImageIcon;
 import javax.swing.JCheckBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -47,6 +46,7 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 
 import com.romraider.dataflowSimulation.DataflowSimulation;
+import com.romraider.Version;
 import com.romraider.dataflowSimulation.GenericAction;
 import com.romraider.dataflowSimulation.GenericAction.GenericActionType;
 import com.romraider.editor.ecu.ECUEditor;
@@ -271,7 +271,7 @@ public final class DataflowFrame extends AbstractFrame {
 			@Override
 			public void run() {
 				DataflowFrame dataflow = new DataflowFrame(sim);
-				dataflow.setIconImage(new ImageIcon(getClass().getResource("/graphics/romraider-ico.gif")).getImage());
+				dataflow.setIconImage(Version.ABOUT_ICON.getImage());
 				dataflow.setDefaultCloseOperation(DISPOSE_ON_CLOSE);
 				dataflow.addWindowListener(dataflow);
 				dataflow.setLocation(100, 50);

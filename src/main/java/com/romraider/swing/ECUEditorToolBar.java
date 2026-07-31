@@ -20,6 +20,7 @@
 package com.romraider.swing;
 
 import static javax.swing.BorderFactory.createLineBorder;
+import static javax.swing.BorderFactory.createEmptyBorder;
 
 import java.awt.Color;
 import java.awt.Dimension;
@@ -38,6 +39,7 @@ import javax.swing.JToolBar;
 import com.romraider.Settings;
 import com.romraider.editor.ecu.ECUEditor;
 import com.romraider.editor.ecu.ECUEditorManager;
+import com.romraider.theme.HiDpiIconScaler;
 import com.romraider.util.ResourceUtil;
 import com.romraider.util.SettingsManager;
 
@@ -53,10 +55,11 @@ public class ECUEditorToolBar extends JToolBar implements ActionListener {
 
     public ECUEditorToolBar(String name) {
         super(name);
-        this.setFloatable(true);
+        this.setFloatable(false);
         this.setRollover(true);
         FlowLayout toolBarLayout = new FlowLayout(FlowLayout.LEFT, 0, 0);
         this.setLayout(toolBarLayout);
+        this.setBorder(createEmptyBorder());
         //this.setBorder(BorderFactory.createTitledBorder("Editor Tools"));
 
         this.updateIcons();
@@ -93,14 +96,7 @@ public class ECUEditorToolBar extends JToolBar implements ActionListener {
     }
 
     private ImageIcon rescaleImageIcon(ImageIcon imageIcon, int percentOfOriginal) {
-        int newHeight = (int) (imageIcon.getImage().getHeight(this) * (percentOfOriginal * .01));
-        int newWidth = (int) (imageIcon.getImage().getWidth(this) * (percentOfOriginal * .01));
-
-        if(newHeight > 0 && newWidth > 0)
-        {
-            imageIcon.setImage(imageIcon.getImage().getScaledInstance(newWidth, newHeight, Image.SCALE_SMOOTH));
-        }
-        return imageIcon;
+        return HiDpiIconScaler.scale(imageIcon, percentOfOriginal);
     }
 
     public void updateButtons() {

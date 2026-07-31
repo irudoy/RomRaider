@@ -23,8 +23,10 @@ package com.romraider;
 
 import javax.swing.ImageIcon;
 
+import com.romraider.theme.HiDpiIconScaler;
+
 public final class Version {
-    public static final String PRODUCT_NAME = "@name.package@";
+    public static final String PRODUCT_NAME = "RomRaiderHD";
     public static final String VERSION = "@version.major@.@version.minor@.@version.patch@ @version.extra@ @version.extra1@";
     public static final String BUILDNUMBER = "@version.buildnumber@";
     public static final String SUPPORT_URL = "@supporturl@";
@@ -33,7 +35,9 @@ public final class Version {
     public static final String LOGGER_DEFS_URL = "@loggerdefsurl@";
     public static final String CARS_DEFS_URL = "@carsdefsurl@";
     public static final String RELEASE_NOTES = "@release_notes@";
-    public static final ImageIcon ABOUT_ICON = new ImageIcon(Version.class.getResource("/graphics/romraider-ico-large.gif"));
+    public static final ImageIcon ABOUT_ICON = HiDpiIconScaler.fixed(
+            new ImageIcon(Version.class.getResource(
+                    "/graphics/romraider-ico-large.gif")), 109, 104);
     public static final int MIN_LOG_DEF_VERSION = @min.logger.def.version@;
     public static final String BUILD_ARCH = "@build.arch@";
 

@@ -3,15 +3,14 @@ Here are steps to setup Visual Studio Code to build and debug RomRaider.
 1. Download Git for your operating system. You'll use git to clone the RomRaider repository.
 	> https://git-scm.com/downloads
 	
-1. Download a Java OpenJDK 8 32bit version, several options are available: RedHat, Oracle, Adopt, etc. I use AdoptOpenJdk 8 just because I don't have to register to download it.
+1. Download and install an OpenJDK 17 or newer JDK for your operating system.
 
-	When installing, if there's a option to set JAVA_HOME variable, have the installer do it. You may have to edit it manually later, Adopt lets you set this during OpenJDK install.
+	When installing, configure the JAVA_HOME variable to point to the JDK. Some
+	installers can set it automatically.
 	
 	> Links:
 	>
-	> [Red Hat OpenJdk](https://developers.redhat.com/products/openjdk/download?extIdCarryOver=true&sc_cid=701f2000000RWTnAAO)
-	>
-	> [Adopt OpenJdk](https://adoptopenjdk.net/releases.html?variant=openjdk8&jvmVariant=openj9)
+	> [Eclipse Temurin](https://adoptium.net/temurin/releases/?version=17)
 
 1. Download ANT: https://ant.apache.org/bindownload.cgi
 	> - 1.10.7 release - requires minimum of Java 8 at runtime
@@ -21,10 +20,6 @@ Here are steps to setup Visual Studio Code to build and debug RomRaider.
 	
 1. Add '**ANT_HOME**' as a System Environment variable excluding the quotes.
 	> - For the value use the unzipped ANT path from the previous step. For Example: 'C:\Users\<USERNAME>\ANT'
-	> - If you do not know how to add a environment variable, see: https://docs.oracle.com/javase/tutorial/essential/environment/paths.html
-
-1. Add '**JRE_DIR**' as a System Environment variable excluding the quotes.
-	> - For the value use the directory from the Java install. For Example: 'C:\Program Files (x86)\Java\jre-1.8'
 	> - If you do not know how to add a environment variable, see: https://docs.oracle.com/javase/tutorial/essential/environment/paths.html
 
 1. Edit the existing '**PATH**' System Environment, add the directory you unzipped ANT to with the \bin directory appended.
