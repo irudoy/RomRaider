@@ -24,6 +24,7 @@ import static com.romraider.swing.LookAndFeelManager.initLookAndFeel;
 import static com.romraider.util.LogManager.initDebugLogging;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assume.assumeTrue;
 
 import java.io.File;
 import java.util.Collection;
@@ -60,19 +61,23 @@ public class XDFConversionLayerTest{
 
     @Test
     public void loadXDFs() {
+        String testDirectory = System.getProperty("romraider.test.xdfDir");
+        assumeTrue("Set romraider.test.xdfDir to run the XDF integration test",
+                testDirectory != null && !testDirectory.isEmpty());
+        File folder = new File(testDirectory);
+        assumeTrue("XDF integration test directory does not exist",
+                folder.isDirectory());
+
+        // Make sure we do not override any settings.
+        SettingsManager.setTesting(true);
         initDebugLogging();
         initLookAndFeel();
         ECUEditor editor = getECUEditor();
         editor.initializeEditorUI();
         editor.checkDefinitions();
 
-        // Make sure we dont override any settings
-        SettingsManager.setTesting(true);
         Settings settings = SettingsManager.getSettings();
 
-        // https://github.com/dmacpro91/BMW-XDFs
-        // Download locally and unzip
-        File folder = new File("C:\\Users\\User\\Downloads\\BMW-XDFs-master\\");
         Collection<File> listOfFiles = listFileTree(folder);
         for (File f: listOfFiles) {
             ConversionLayer l = new XDFConversionLayer();

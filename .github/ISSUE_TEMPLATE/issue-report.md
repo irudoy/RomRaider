@@ -25,7 +25,7 @@ If applicable, add screenshots to help explain your problem.
 
 **Desktop (please complete the following information):**
  - OS version: [e.g. Windows 10, Linux (dist), etc]
- - Java version: [From RomRaider - Help - About, e.g. Sun Microsystems Inc. 1.6.0_45]
+ - Java version: [From RomRaider - Help - About, e.g. Eclipse Adoptium 17.x]
  - RomRaider version: [or Github commit if not the latest official release] 
 
 **Additional context**

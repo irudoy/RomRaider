@@ -112,11 +112,12 @@
         </condition>
 
         <!-- java compiler properties -->
-        <property name="javac.source" value="17" />
-        <property name="javac.target" value="17" />
+        <property name="javac.release" value="17" />
         <property name="debug" value="off" />
         <property name="deprecation" value="on" />
         <property name="javac.verbose" value="off" />
+        <property name="test.headless" value="true" />
+        <property name="romraider.test.xdfDir" value="" />
 
         <!-- version properties are set in this file, both for the product itself and
                 for some of the external dependencies (jar files and such) -->
@@ -126,6 +127,7 @@
         <property name="src.dir" value="${basedir}/src" />
         <property name="src.java.dir" value="${src.dir}/main/java" />
         <property name="src.res.dir" value="${src.dir}/main/resources" />
+        <property name="src.test.java.dir" value="${src.dir}/test/java" />
         <property name="graphics.dir" value="${src.res.dir}/graphics" />
         <property name="docs.dir" value="${basedir}/docs" />
         <property name="build.dir" value="${basedir}/build" />
@@ -137,6 +139,7 @@
         <property name="javadoc.dir" value="${build.dir}/javadoc" />
         <property name="dist.dir" value="${build.dir}/dist" />
         <property name="testclasses.dir" value="${build.dir}/test" />
+        <property name="test.home.dir" value="${build.dir}/test-home" />
 
         <!-- package naming properties -->
         <property name="jar.package" value="${name.package}.jar" />
@@ -156,10 +159,6 @@
         </condition>
         <property name="izpack.compile" value="${izpack.dir}/izpack-standalone-compiler.jar" />
 
-        <!-- define custom tasks -->
-        <taskdef name="launch4j" classname="net.sf.launch4j.ant.Launch4jTask" onerror="report"
-                 classpath="${launch4j.dir}/launch4j.jar:${launch4j.dir}/lib/xstream.jar" />
-
         <path id="windows.classpath">
             <fileset dir="lib/common" includes="*.jar" />
             <fileset dir="lib/windows" includes="*.jar" />
@@ -170,20 +169,16 @@
             <fileset dir="lib/linux" includes="*.jar" />
         </path>
 
-        <path id="test.classpath">
-            <fileset dir="${testclasses.dir}" includes="**/*.jar" />
-        </path>
-
         <path id="junit_compile.classpath">
             <path refid="linux.classpath" />
+            <pathelement location="${build.dir}/linux/lib/${jar.package}" />
             <pathelement location="lib/testing/junit.jar" />
             <pathelement location="lib/testing/hamcrest.jar" />
         </path>
 
         <path id="junit_runtime.classpath">
             <path refid="junit_compile.classpath" />
-            <pathelement location="${build.dir}/linux/lib/RomRaider.jar" />
-            <path refid="test.classpath" />
+            <pathelement location="${testclasses.dir}" />
         </path>
 
         <!-- this set of filters should contain all the substitutions needed -->
@@ -261,15 +256,20 @@
     <!-- =================================================================== -->
     <!-- Compile and run all unit tests                                      -->
     <!-- =================================================================== -->
-    <target name="compile-for-unittests" depends="prepare" description="Compile and run Linux unit tests">
+    <target name="compile-for-unittests" depends="build-linux" description="Compile unit tests">
         <mkdir dir="${testclasses.dir}" />
-        <macro_compile os="${os.linux}" srcdir="${src.dir}" destdir="${testclasses.dir}" classpathref="junit_compile.classpath" />
-        <macro_jar os="${os.linux}" basedir="${testclasses.dir}"/>
+        <macro_compile os="${os.linux}" srcdir="${src.test.java.dir}" destdir="${testclasses.dir}" classpathref="junit_compile.classpath" />
     </target>
     <target name="unittest" depends="compile-for-unittests" description="Perform unit tests">
         <!-- We execute same coverage on both Windows and Linux-->
-        <junit printsummary="withOutAndErr" showoutput="true" haltonfailure="true">
+        <mkdir dir="${test.home.dir}/.RomRaider" />
+        <junit printsummary="withOutAndErr" showoutput="true"
+               haltonfailure="true" fork="true" forkmode="once">
             <classpath refid="junit_runtime.classpath" />
+            <sysproperty key="user.home" value="${test.home.dir}" />
+            <sysproperty key="java.awt.headless" value="${test.headless}" />
+            <sysproperty key="romraider.test.xdfDir"
+                         value="${romraider.test.xdfDir}" />
             <batchtest skipNonTests="true">
                 <fileset dir="${testclasses.dir}">
                     <include name="**/*Test*" />
@@ -300,7 +300,13 @@
     <!-- =================================================================== -->
     <!-- create installation                                                 -->
     <!-- =================================================================== -->
-    <target name="installer" depends="-init" if="have.3rdparty"
+    <target name="-init-launch4j" depends="-init" if="have.3rdparty">
+        <taskdef name="launch4j"
+                 classname="net.sf.launch4j.ant.Launch4jTask"
+                 classpath="${launch4j.dir}/launch4j.jar:${launch4j.dir}/lib/xstream.jar" />
+    </target>
+
+    <target name="installer" depends="-init, -init-launch4j" if="have.3rdparty"
         description="Create installation distribution packages">
         <delete dir="${dist.dir}" failonerror="false" />
         <mkdir dir="${dist.dir}/windows" />
@@ -335,7 +341,7 @@
     <!-- =================================================================== -->
     <!-- create standalone ZIP                                               -->
     <!-- =================================================================== -->
-    <target name="standalone" depends="rebuild"
+    <target name="standalone" depends="rebuild, unittest"
         description="Create standalone ZIP packages">
         <macro_standalone os="${os.windows}" />
         <macro_standalone os="${os.linux}" />
@@ -344,7 +350,7 @@
     <!-- =================================================================== -->
     <!-- all                                                                 -->
     <!-- =================================================================== -->
-    <target name="all" depends="rebuild, installer, standalone"
+    <target name="all" depends="rebuild, unittest, installer, standalone"
         description="Compile and create distribution packages" />
 
     <!-- =================================================================== -->
@@ -368,7 +374,7 @@
         </sequential>
     </macrodef>
 
-    <target name="-launch4j" if="is.windows"
+    <target name="-launch4j" depends="-init-launch4j" if="is.windows"
         description="Create the exe launcher of the installer or package for Windows">
         <launch4j configFile="${dist.dir}/l4j-${type}.xml" />
     </target>
@@ -414,13 +420,12 @@
         <attribute name="destdir" />
         <attribute name="classpathref" />
         <sequential>
-            <mkdir dir="${classes.dir}" />
+            <mkdir dir="@{destdir}" />
             <javac
                 failonerror="true"
                 srcdir="@{srcdir}"
                 destdir="@{destdir}"
-                source="${javac.source}"
-                target="${javac.target}"
+                release="${javac.release}"
                 includeantruntime="false"
                 debug="${debug}"
                 verbose="${javac.verbose}"

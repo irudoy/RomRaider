@@ -1,88 +1,76 @@
-Here are steps to setup Visual Studio Code to build and debug RomRaider.
+# Building RomRaider with Visual Studio Code
 
-1. Download Git for your operating system. You'll use git to clone the RomRaider repository.
-	> https://git-scm.com/downloads
-	
-1. Download and install an OpenJDK 17 or newer JDK for your operating system.
+## Requirements
 
-	When installing, configure the JAVA_HOME variable to point to the JDK. Some
-	installers can set it automatically.
-	
-	> Links:
-	>
-	> [Eclipse Temurin](https://adoptium.net/temurin/releases/?version=17)
+Install the following tools:
 
-1. Download ANT: https://ant.apache.org/bindownload.cgi
-	> - 1.10.7 release - requires minimum of Java 8 at runtime
-	> - Unzip **ANT** to a known location. 
-	> 
-	> For example, I use windows and decided on: 'C:\Users\Walter\ANT'
-	
-1. Add '**ANT_HOME**' as a System Environment variable excluding the quotes.
-	> - For the value use the unzipped ANT path from the previous step. For Example: 'C:\Users\<USERNAME>\ANT'
-	> - If you do not know how to add a environment variable, see: https://docs.oracle.com/javase/tutorial/essential/environment/paths.html
+- [Git](https://git-scm.com/downloads)
+- An OpenJDK 17 distribution such as [Eclipse Temurin](https://adoptium.net/temurin/releases/?version=17)
+- [Apache Ant 1.10.x](https://ant.apache.org/bindownload.cgi), including its optional tasks
+- [Visual Studio Code](https://code.visualstudio.com/)
+- The [Extension Pack for Java](https://marketplace.visualstudio.com/items?itemName=vscjava.vscode-java-pack)
 
-1. Edit the existing '**PATH**' System Environment, add the directory you unzipped ANT to with the \bin directory appended.
-	> For Example: 'C:\Users\<USERNAME>\ANT\bin'
-		
-1. Download & Install '**Visual Studio Code**':
-	> https://code.visualstudio.com/
+Set `JAVA_HOME` to the JDK 17 installation. Set `ANT_HOME` to the Ant
+installation, then add `%JAVA_HOME%\bin` and `%ANT_HOME%\bin` to `PATH` on
+Windows, or the corresponding `bin` directories on Linux and macOS.
 
-1. Download & Install '**Java Extension Pack**' VsCode Extension:
-	> https://marketplace.visualstudio.com/items?itemName=vscjava.vscode-java-pack
+Verify that Java and the compiler both use version 17:
 
-1. Optional: Download & Install '**Ant Target Runner**' Extension: https://marketplace.visualstudio.com/items?itemName=nickheap.vscode-ant
+```text
+java -version
+javac -version
+ant -version
+```
 
-1. Open the RomRaider folder in VS Code. Ensure the Explorer panel is open. 
-	> 'View Menu > Explorer'
+## Build and test
 
-1. Open the terminal window '**View Menu > Terminal**'
-	> - Type the following and press enter: ant all
-	> - Alternately, you can use the 'Ant Target Runner' panel, it should be underneath the files list. Right click the 'all' node and select 'Run Ant Target'
-	> - *You will need to do one of the above each time you make a code change.*
+Open the repository folder in Visual Studio Code, then run this command in the
+integrated terminal:
 
-1. Open the Debug Panel. 
-	> 'View Menu > Debug'
+```text
+ant all
+```
 
-1. On the debug panel, click the '**create and launch.json file**' link. You may get a popup asking for Environment select Java. This will generate a launch.json file and open it.
+This command performs a clean build, runs the tests, and writes the Windows
+and Linux packages below `build/dist`. To run only the tests, use:
 
-1. When this file is generated, you'll need to delete all but two json entries. You want to keep ECUExec and EcuLoggerExec. The end result should look similar to below.
-	```
-	{
-	// Use IntelliSense to learn about possible attributes.
-	// Hover to view descriptions of existing attributes.
-	// For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
-		"version": "0.2.0",
-		"configurations": [
-			{
-				"type": "java",
-				"name": "Debug (Launch)-ECUExec<romraider>",
-				"request": "launch",
-				"mainClass": "com.romraider.ECUExec",
-				"projectName": "romraider"
-			},
-			{
-				"type": "java",
-				"name": "Debug (Launch)-EcuLoggerExec<romraider>",
-				"request": "launch",
-				"mainClass": "com.romraider.logger.ecu.EcuLoggerExec",
-				"projectName": "romraider"
-			}
-		]
-	}
+```text
+ant unittest
+```
 
-1. At the top of the debug panel, you'll see a label '**Run And Debug**' and a drop down box. 
-	> - From the dropdown box select the appropriate option depending on whether you want to debug RomRaider Editor or RomRaider Logger.
-	> - Press the play button next to the dropdown or press F5.
-	> - You will likely get a popup: 'Build failed, do you want to continue?' Click Proceed.
-	> - RomRaider should launch.
+The optional XDF integration test requires a local directory of XDF files:
 
-1. If you're still here, Congrats! You are now able to debug RomRaider. You can set breakpoints in the source code, and step through the code.
+```text
+ant -Dromraider.test.xdfDir=/path/to/xdf-definitions unittest
+```
 
-1. If the steps above didn't work, please review them to make sure you didn't miss anything. If it still doesn't work contact me via my github account below.
+## Debug configuration
 
-Thanks,
+Open the Run and Debug panel and create `.vscode/launch.json`. Use these two
+launch configurations for the editor and logger:
 
-Walter Stypula
+```json
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "RomRaider Editor",
+            "request": "launch",
+            "mainClass": "com.romraider.ECUExec",
+            "projectName": "romraider"
+        },
+        {
+            "type": "java",
+            "name": "RomRaider Logger",
+            "request": "launch",
+            "mainClass": "com.romraider.logger.ecu.EcuLoggerExec",
+            "projectName": "romraider"
+        }
+    ]
+}
+```
 
-https://github.com/walterstypula
+Run `ant all` after source changes before starting either configuration. If
+Visual Studio Code reports unresolved generated sources, reload the Java
+projects after the Ant build completes.

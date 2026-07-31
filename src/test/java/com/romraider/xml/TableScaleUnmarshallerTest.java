@@ -54,6 +54,15 @@ public class TableScaleUnmarshallerTest {
         }
     }
 
+    @Test(expected = XMLParseException.class)
+    public void rejectsUnknownTableType() throws Exception {
+        final org.w3c.dom.Element table = document.createElement("table");
+        table.setAttribute("name", "Invalid table");
+        table.setAttribute("type", "Invalid Axis");
+
+        tableScaleHandler.unmarshallTable(table, null, null);
+    }
+
     private Document getDocument() {
         final EcuDefinition ecuDef = new EcuDefinitionImpl("2F12795606", "A2WC522S",
                 "05 Outback XT", "32BITBASE", new File("src/test/definitions/scalingbase_test.xml"));

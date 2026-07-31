@@ -26,7 +26,6 @@ import static org.w3c.dom.Node.ELEMENT_NODE;
 import java.util.HashMap;
 import java.util.Map;
 
-import javax.management.modelmbean.XMLParseException;
 import javax.swing.JOptionPane;
 
 import org.apache.log4j.Logger;
