@@ -28,8 +28,28 @@ jobs:
           java -version
           ant -version
 
-      - name: Run tests and build packages
-        run: ant all
+      - name: Run tests and build standalone packages
+        run: ant standalone
+
+      - name: Store Windows release package
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-windows
+          path: build/dist/windows/*-windows.zip
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 1
+
+      - name: Store Linux release package
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-linux
+          path: build/dist/linux/*-linux.zip
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 1
 
   macos-app:
     name: macOS Apple Silicon application
@@ -54,6 +74,26 @@ jobs:
           tools/macos/install-macos-app.sh \
             --app "$RUNNER_TEMP/RomRaiderHD.app"
 
+      - name: Create macOS application archive
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        shell: bash
+        run: |
+          /usr/bin/ditto \
+            -c -k --sequesterRsrc --keepParent \
+            "$RUNNER_TEMP/RomRaiderHD.app" \
+            "$RUNNER_TEMP/RomRaiderHD-macos-arm64.zip"
+          /usr/bin/unzip -t "$RUNNER_TEMP/RomRaiderHD-macos-arm64.zip"
+
+      - name: Store macOS release package
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-macos
+          path: ${{ runner.temp }}/RomRaiderHD-macos-arm64.zip
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 1
+
   container:
     name: Container build
     runs-on: ubuntu-latest
@@ -71,3 +111,85 @@ jobs:
             --user "$(id -u):$(id -g)" \
             --volume "$GITHUB_WORKSPACE:/home/romraider/RomRaider" \
             romraider-builder:test ant all
+
+  release:
+    name: Publish master prerelease
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    needs:
+      - packages
+      - macos-app
+      - container
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download release packages
+        uses: actions/download-artifact@v8
+        with:
+          pattern: release-*
+          path: release-assets
+          merge-multiple: true
+
+      - name: Verify release packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          assets=(release-assets/*)
+          [[ "${#assets[@]}" -eq 3 ]]
+          [[ "$(find release-assets -maxdepth 1 -type f -name '*-windows.zip' | wc -l)" -eq 1 ]]
+          [[ "$(find release-assets -maxdepth 1 -type f -name '*-linux.zip' | wc -l)" -eq 1 ]]
+          [[ -f release-assets/RomRaiderHD-macos-arm64.zip ]]
+
+      - name: Publish GitHub Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          release_tag="master-${GITHUB_SHA}"
+          short_sha="${GITHUB_SHA:0:7}"
+          release_title="RomRaiderHD master ${short_sha}"
+          release_notes="Automated prerelease built from master.
+
+          Commit: ${GITHUB_SHA}
+
+          Packages:
+          - Windows standalone ZIP
+          - Linux standalone ZIP
+          - macOS Apple Silicon application ZIP
+
+          Java 17 or newer is required."
+
+          if release_is_draft="$(gh release view "$release_tag" \
+            --repo "$GITHUB_REPOSITORY" \
+            --json isDraft \
+            --jq '.isDraft' 2>/dev/null)"; then
+            if [[ "$release_is_draft" == "false" ]]; then
+              echo "Release ${release_tag} is already published."
+              exit 0
+            fi
+          else
+            gh release create "$release_tag" \
+              --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" \
+              --title "$release_title" \
+              --notes "$release_notes" \
+              --draft \
+              --prerelease \
+              --latest=false
+          fi
+
+          gh release upload "$release_tag" release-assets/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --clobber
+
+          gh release edit "$release_tag" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "$release_title" \
+            --notes "$release_notes" \
+            --draft=false \
+            --prerelease \
+            --latest=false

@@ -9,7 +9,7 @@
 # cross platform development
 ./*.txt           eol=crlf
 ./*.bat           eol=crlf
-./*.sh            eol=lf
+*.sh              text eol=lf
 ./*.dtd           eol=lf
 ./*.xml           eol=lf
 ./*.html          eol=lf
