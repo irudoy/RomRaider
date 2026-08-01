@@ -20,6 +20,7 @@
 package com.romraider.swing;
 
 import java.awt.Font;
+import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
@@ -29,6 +30,7 @@ import javax.swing.AbstractAction;
 import javax.swing.Action;
 import javax.swing.JTree;
 import javax.swing.KeyStroke;
+import javax.swing.SwingUtilities;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreePath;
 
@@ -40,6 +42,8 @@ import com.romraider.util.SettingsManager;
 public class RomTree extends JTree implements MouseListener {
 
     private static final long serialVersionUID = 1630446543383498886L;
+    private transient TreePath pressedPath;
+    private transient boolean mousePressCaptured;
 
     public RomTree(DefaultMutableTreeNode input) {
         super(input);
@@ -80,29 +84,88 @@ public class RomTree extends JTree implements MouseListener {
     }
 
     @Override
+    protected void processMouseEvent(MouseEvent e) {
+        if (e.getID() == MouseEvent.MOUSE_PRESSED) {
+            mousePressCaptured = true;
+            pressedPath = SwingUtilities.isLeftMouseButton(e)
+                    ? getPathForRowAt(e.getY()) : null;
+        }
+
+        try {
+            super.processMouseEvent(e);
+            if (e.getID() == MouseEvent.MOUSE_PRESSED) {
+                handlePressedTable(e);
+            }
+        } finally {
+            if (e.getID() == MouseEvent.MOUSE_CLICKED) {
+                pressedPath = null;
+                mousePressCaptured = false;
+            }
+        }
+    }
+
+    @Override
     public void mouseClicked(MouseEvent e) {
-        TreePath treePath = getPathForLocation(e.getX(), e.getY());
-        if (treePath == null)
+        TreePath treePath = mousePressCaptured ? pressedPath : null;
+        if (treePath == null) {
             return; // this happens if we click in the empty area
+        }
+
+        setSelectionPath(treePath);
         Object selectedRow = treePath.getLastPathComponent();
         /* if nothing is selected */
         if (selectedRow == null) {
             return;
         }
 
-        if (e.getClickCount() >= SettingsManager.getSettings().getTableClickCount()
-                && selectedRow instanceof TableTreeNode && getRomNode((TableTreeNode)selectedRow) != null) {
-            showTable((TableTreeNode)selectedRow);
+        if (selectedRow instanceof TableTreeNode) {
+            return;
         }
 
         setLastSelectedRom(selectedRow);
     }
 
-    private void showTable(TableTreeNode selectedRow) {
+    private void handlePressedTable(MouseEvent e) {
+        if (!SwingUtilities.isLeftMouseButton(e) || pressedPath == null) {
+            return;
+        }
+
+        Object selectedRow = pressedPath.getLastPathComponent();
+        if (selectedRow instanceof TableTreeNode
+                && getRomNode((TableTreeNode) selectedRow) != null) {
+            setSelectionPath(pressedPath);
+            setLastSelectedRom(selectedRow);
+            if (isConfiguredTableClick(e)) {
+                showTable((TableTreeNode) selectedRow);
+            }
+        }
+    }
+
+    private TreePath getPathForRowAt(int y) {
+        int row = getClosestRowForLocation(0, y);
+        if (row < 0) {
+            return null;
+        }
+
+        Rectangle bounds = getRowBounds(row);
+        if (bounds == null || y < bounds.y || y >= bounds.y + bounds.height) {
+            return null;
+        }
+        return getPathForRow(row);
+    }
+
+    private boolean isConfiguredTableClick(MouseEvent e) {
+        int clickCount = Math.max(
+                1, SettingsManager.getSettings().getTableClickCount());
+        return SwingUtilities.isLeftMouseButton(e)
+                && e.getClickCount() >= clickCount;
+    }
+
+    protected void showTable(TableTreeNode selectedRow) {
         getEditor().displayTable(selectedRow);
     }
 
-    private void setLastSelectedRom(Object selectedNode) {
+    protected void setLastSelectedRom(Object selectedNode) {
         if (selectedNode == null || selectedNode instanceof RomTreeRootNode) {
             return;
         }
@@ -111,8 +174,11 @@ public class RomTree extends JTree implements MouseListener {
         if (romNode == null) {
             return;
         }
-        getEditor().setLastSelectedRom(romNode);
-        getEditor().refreshUI();
+        ECUEditor editor = getEditor();
+        if (editor.getLastSelectedRom() != romNode) {
+            editor.setLastSelectedRom(romNode);
+            editor.refreshUI();
+        }
     }
 
     public static Rom getRomNode(Object currentNode){

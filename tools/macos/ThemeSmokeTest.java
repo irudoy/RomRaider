@@ -1,17 +1,21 @@
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.Insets;
+import java.awt.Rectangle;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.awt.image.MultiResolutionImage;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
 import javax.swing.Action;
+import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.ImageIcon;
@@ -30,6 +34,9 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.plaf.UIResource;
 import javax.swing.plaf.basic.BasicHTML;
 import javax.swing.text.View;
+import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.DefaultTreeModel;
+import javax.swing.tree.TreePath;
 
 import com.romraider.Settings;
 import com.romraider.Version;
@@ -39,8 +46,12 @@ import com.romraider.maps.Table2D;
 import com.romraider.maps.Table2DView;
 import com.romraider.maps.Table3D;
 import com.romraider.maps.Table3DView;
+import com.romraider.swing.CustomToolbarLayout;
+import com.romraider.swing.MDIDesktopPane;
 import com.romraider.swing.RomCellRenderer;
+import com.romraider.swing.RomTree;
 import com.romraider.swing.TableFrame;
+import com.romraider.swing.TableTreeNode;
 import com.romraider.swing.TableToolBar;
 import com.romraider.theme.DarkNimbusLookAndFeel;
 import com.romraider.theme.HiDpiIconScaler;
@@ -79,10 +90,13 @@ public final class ThemeSmokeTest {
         assertName("3D smoke test", view3D.getName());
         verifyTableFrame(new TableFrame("3D map", view3D));
         verifyDetachedMapIcons(table3D);
+        verifyTableFrameHandoff();
 
         verifyHiDpiIcon();
         verifyDarkControls();
         verifyToolbarWidths();
+        verifyToolbarAlignment();
+        verifyRomTreeClickHandling();
         verifyRomDescriptionDoesNotWrap();
         verifyToolbarBorders();
     }
@@ -189,6 +203,7 @@ public final class ThemeSmokeTest {
         Settings settings =
                 (Settings) allocateInstance.invoke(unsafe, Settings.class);
         settings.setCellSize(new Dimension(42, 18));
+        settings.setTableClickCount(1);
 
         Field field = SettingsManager.class.getDeclaredField("settings");
         field.setAccessible(true);
@@ -290,6 +305,55 @@ public final class ThemeSmokeTest {
         } catch (ReflectiveOperationException error) {
             throw new AssertionError(
                     "Cannot verify the active map shortcut", error);
+        }
+    }
+
+    private static void verifyTableFrameHandoff() throws Exception {
+        MDIDesktopPane desktop = new MDIDesktopPane();
+        desktop.setSize(800, 600);
+
+        Table2D firstTable = new Table2D();
+        firstTable.setName("First map");
+        TableFrame firstFrame = new TableFrame(
+                "First map", new Table2DView(firstTable));
+        firstFrame.removeInternalFrameListener(firstFrame);
+
+        Table2D secondTable = new Table2D();
+        secondTable.setName("Second map");
+        TableFrame secondFrame = new TableFrame(
+                "Second map", new Table2DView(secondTable));
+        secondFrame.removeInternalFrameListener(secondFrame);
+
+        desktop.add(firstFrame);
+        desktop.add(secondFrame);
+        desktop.activateTableFrame(firstFrame);
+        if (desktop.getComponentZOrder(firstFrame) != 0) {
+            throw new AssertionError("First map was not moved to front");
+        }
+        TableFrame nextFrame = desktop.closeTableFrame(firstFrame);
+        if (firstTable.getTableFrame() != null) {
+            throw new AssertionError(
+                    "Closed map remains attached to its table");
+        }
+        if (nextFrame != secondFrame) {
+            throw new AssertionError("Next open map was not selected");
+        }
+
+        desktop.activateTableFrame(nextFrame);
+        if (desktop.getComponentZOrder(secondFrame) != 0) {
+            throw new AssertionError(
+                    "Next open map was not moved to front");
+        }
+        desktop.closeTableFrame(secondFrame);
+
+        Table2D detachedTable = new Table2D();
+        detachedTable.setName("Detached map");
+        TableFrame detachedFrame = new TableFrame(
+                "Detached map", new Table2DView(detachedTable));
+        detachedFrame.dispose();
+        if (detachedTable.getTableFrame() != null) {
+            throw new AssertionError(
+                    "Disposed map remains attached to its table");
         }
     }
 
@@ -434,6 +498,252 @@ public final class ThemeSmokeTest {
             throw new AssertionError(
                     fieldName + " has width " + actualWidth
                             + ", expected " + expectedWidth);
+        }
+    }
+
+    private static void verifyToolbarAlignment() {
+        JPanel panel = new JPanel(new CustomToolbarLayout(
+                FlowLayout.LEFT, 0, 0, 2));
+        panel.setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 0));
+
+        JPanel toolbar = new JPanel();
+        toolbar.setPreferredSize(new Dimension(80, 20));
+        panel.add(toolbar);
+        panel.setSize(200, 31);
+        panel.doLayout();
+
+        if (toolbar.getX() != 8) {
+            throw new AssertionError(
+                    "Toolbar left position is " + toolbar.getX()
+                            + ", expected 8");
+        }
+        if (toolbar.getY() != 8) {
+            throw new AssertionError(
+                    "Toolbar vertical position is " + toolbar.getY()
+                            + ", expected 8");
+        }
+
+        panel.setSize(200, 20);
+        panel.doLayout();
+        if (toolbar.getY() != 2) {
+            throw new AssertionError(
+                    "Toolbar optical offset is " + toolbar.getY()
+                            + ", expected 2");
+        }
+    }
+
+    private static void verifyRomTreeClickHandling() throws Exception {
+        DefaultMutableTreeNode root = new DefaultMutableTreeNode("root");
+        DefaultMutableTreeNode row = new DefaultMutableTreeNode("row");
+        root.add(row);
+
+        TestRomTree tree = new TestRomTree(root);
+        tree.setSize(320, 100);
+        tree.expandPath(new TreePath(root.getPath()));
+        tree.doLayout();
+
+        Rectangle bounds = tree.getRowBounds(0);
+        if (bounds == null) {
+            throw new AssertionError("ROM tree row has no bounds");
+        }
+        int x = Math.min(tree.getWidth() - 1,
+                bounds.x + bounds.width + 80);
+        int y = bounds.y + bounds.height / 2;
+        if (tree.getPathForLocation(x, y) != null) {
+            throw new AssertionError(
+                    "ROM tree test point is not outside the label");
+        }
+
+        MouseEvent singleClick = new MouseEvent(
+                tree, MouseEvent.MOUSE_CLICKED, 0, 0,
+                x, y, 1, false, MouseEvent.BUTTON1);
+        tree.sendMouseEvent(new MouseEvent(
+                tree, MouseEvent.MOUSE_PRESSED, 0, 0,
+                x, y, 1, false, MouseEvent.BUTTON1));
+        tree.sendMouseEvent(new MouseEvent(
+                tree, MouseEvent.MOUSE_RELEASED, 0, 0,
+                x, y, 1, false, MouseEvent.BUTTON1));
+        tree.sendMouseEvent(singleClick);
+        if (tree.getLastSelectedPathComponent() != row) {
+            throw new AssertionError(
+                    "ROM tree row whitespace is not clickable");
+        }
+
+        Method clickCheck = RomTree.class.getDeclaredMethod(
+                "isConfiguredTableClick", MouseEvent.class);
+        clickCheck.setAccessible(true);
+        if (!Boolean.TRUE.equals(clickCheck.invoke(tree, singleClick))) {
+            throw new AssertionError("Single table click was ignored");
+        }
+
+        MouseEvent doubleClick = new MouseEvent(
+                tree, MouseEvent.MOUSE_CLICKED, 0, 0,
+                x, y, 2, false, MouseEvent.BUTTON1);
+        if (!Boolean.TRUE.equals(clickCheck.invoke(tree, doubleClick))) {
+            throw new AssertionError(
+                    "A continued click sequence was ignored");
+        }
+
+        Settings settings = SettingsManager.getSettings();
+        settings.setTableClickCount(2);
+        if (!Boolean.FALSE.equals(clickCheck.invoke(tree, singleClick))
+                || !Boolean.TRUE.equals(clickCheck.invoke(tree, doubleClick))) {
+            throw new AssertionError(
+                    "Double-click table setting was not respected");
+        }
+        settings.setTableClickCount(1);
+
+        verifyRomTreePressPathIsStable();
+        verifySequentialTablePresses();
+    }
+
+    private static void verifyRomTreePressPathIsStable() {
+        DefaultMutableTreeNode root = new DefaultMutableTreeNode("root");
+        DefaultMutableTreeNode first = new DefaultMutableTreeNode("first");
+        DefaultMutableTreeNode pressed =
+                new DefaultMutableTreeNode("pressed");
+        root.add(first);
+        root.add(pressed);
+
+        TestRomTree tree = new TestRomTree(root);
+        tree.setSize(320, 120);
+        tree.expandPath(new TreePath(root.getPath()));
+        tree.doLayout();
+
+        Rectangle bounds = tree.getRowBounds(1);
+        if (bounds == null) {
+            throw new AssertionError("ROM tree pressed row has no bounds");
+        }
+        int x = tree.getWidth() - 1;
+        int y = bounds.y + bounds.height / 2;
+        tree.sendMouseEvent(new MouseEvent(
+                tree, MouseEvent.MOUSE_PRESSED, 0, 0,
+                x, y, 1, false, MouseEvent.BUTTON1));
+
+        DefaultMutableTreeNode inserted =
+                new DefaultMutableTreeNode("inserted");
+        DefaultTreeModel model = (DefaultTreeModel) tree.getModel();
+        model.insertNodeInto(inserted, root, 0);
+        tree.doLayout();
+
+        tree.sendMouseEvent(new MouseEvent(
+                tree, MouseEvent.MOUSE_RELEASED, 0, 0,
+                x, y, 1, false, MouseEvent.BUTTON1));
+        tree.sendMouseEvent(new MouseEvent(
+                tree, MouseEvent.MOUSE_CLICKED, 0, 0,
+                x, y, 1, false, MouseEvent.BUTTON1));
+        if (tree.getLastSelectedPathComponent() != pressed) {
+            throw new AssertionError(
+                    "ROM tree click followed the shifted release row");
+        }
+    }
+
+    private static void verifySequentialTablePresses() {
+        DefaultMutableTreeNode root = new DefaultMutableTreeNode("root");
+        TestRomTree tree = new TestRomTree(root);
+        JScrollPane scrollPane = new JScrollPane(tree);
+        scrollPane.setSize(340, 160);
+        scrollPane.doLayout();
+        tree.setSize(320, 140);
+
+        DefaultTreeModel model = (DefaultTreeModel) tree.getModel();
+        RomID romID = new RomID();
+        Rom rom = new Rom(romID);
+        model.insertNodeInto(rom, root, root.getChildCount());
+
+        Table2D firstTable = new Table2D();
+        firstTable.setName("First table");
+        TableTreeNode firstNode = new TableTreeNode(firstTable);
+        model.insertNodeInto(firstNode, rom, rom.getChildCount());
+
+        Table2D secondTable = new Table2D();
+        secondTable.setName("Second table");
+        TableTreeNode secondNode = new TableTreeNode(secondTable);
+        model.insertNodeInto(secondNode, rom, rom.getChildCount());
+
+        tree.expandPath(new TreePath(root.getPath()));
+        tree.expandPath(new TreePath(rom.getPath()));
+        tree.doLayout();
+
+        pressTreeRow(tree, 1, 1);
+        if (tree.getShownTableCount() != 1
+                || tree.getLastShownTable() != firstNode) {
+            throw new AssertionError(
+                    "First table did not open on mouse press");
+        }
+
+        pressTreeRow(tree, 2, 2);
+        if (tree.getShownTableCount() != 2
+                || tree.getLastShownTable() != secondNode) {
+            throw new AssertionError(
+                    "Sequential table press was ignored");
+        }
+
+        Settings settings = SettingsManager.getSettings();
+        settings.setTableClickCount(2);
+        pressTreeRow(tree, 1, 1);
+        if (tree.getShownTableCount() != 2
+                || tree.getLastSelectedNode() != firstNode) {
+            throw new AssertionError(
+                    "First click did not select the table ROM");
+        }
+        settings.setTableClickCount(1);
+    }
+
+    private static void pressTreeRow(TestRomTree tree, int row,
+            int clickCount) {
+        Rectangle bounds = tree.getRowBounds(row);
+        if (bounds == null) {
+            throw new AssertionError("ROM tree table row has no bounds");
+        }
+        int x = tree.getWidth() - 1;
+        int y = bounds.y + bounds.height / 2;
+        tree.sendMouseEvent(new MouseEvent(
+                tree, MouseEvent.MOUSE_PRESSED, 0, 0,
+                x, y, clickCount, false, MouseEvent.BUTTON1));
+        tree.sendMouseEvent(new MouseEvent(
+                tree, MouseEvent.MOUSE_RELEASED, 0, 0,
+                x, y, clickCount, false, MouseEvent.BUTTON1));
+        tree.sendMouseEvent(new MouseEvent(
+                tree, MouseEvent.MOUSE_CLICKED, 0, 0,
+                x, y, clickCount, false, MouseEvent.BUTTON1));
+    }
+
+    private static final class TestRomTree extends RomTree {
+        private static final long serialVersionUID = 1L;
+        private int shownTableCount;
+        private TableTreeNode lastShownTable;
+        private Object lastSelectedNode;
+
+        private TestRomTree(DefaultMutableTreeNode root) {
+            super(root);
+        }
+
+        private void sendMouseEvent(MouseEvent event) {
+            super.processMouseEvent(event);
+        }
+
+        @Override
+        protected void showTable(TableTreeNode selectedRow) {
+            shownTableCount++;
+            lastShownTable = selectedRow;
+        }
+
+        @Override
+        protected void setLastSelectedRom(Object selectedNode) {
+            lastSelectedNode = selectedNode;
+        }
+
+        private int getShownTableCount() {
+            return shownTableCount;
+        }
+
+        private TableTreeNode getLastShownTable() {
+            return lastShownTable;
+        }
+
+        private Object getLastSelectedNode() {
+            return lastSelectedNode;
         }
     }
 

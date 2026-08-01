@@ -35,6 +35,7 @@ import javax.swing.JViewport;
 import com.romraider.Settings;
 import com.romraider.editor.ecu.ECUEditor;
 import com.romraider.editor.ecu.ECUEditorManager;
+import com.romraider.maps.Table;
 import com.romraider.util.SettingsManager;
 
 /**
@@ -127,6 +128,58 @@ public class MDIDesktopPane extends JDesktopPane {
         }
         
         checkDesktopSize();
+    }
+
+    public TableFrame getNextTableFrame(TableFrame closingFrame) {
+        JInternalFrame selectedFrame = getSelectedFrame();
+        if (isOpenTableFrame(selectedFrame, closingFrame)) {
+            return (TableFrame) selectedFrame;
+        }
+
+        for (JInternalFrame frame : getAllFrames()) {
+            if (isOpenTableFrame(frame, closingFrame)) {
+                return (TableFrame) frame;
+            }
+        }
+        return null;
+    }
+
+    public TableFrame closeTableFrame(TableFrame frame) {
+        TableFrame nextFrame = getNextTableFrame(frame);
+        Table table = frame.getTable();
+        if (table != null && table.getTableFrame() == frame) {
+            table.setTableFrame(null);
+        }
+        if (frame.getParent() == this) {
+            remove(frame);
+        }
+        frame.dispose();
+        revalidate();
+        repaint();
+        return nextFrame;
+    }
+
+    public void activateTableFrame(TableFrame frame) {
+        if (!isOpenTableFrame(frame, null)) {
+            return;
+        }
+
+        moveToFront(frame);
+        try {
+            frame.setSelected(true);
+            frame.requestFocusInWindow();
+        } catch (PropertyVetoException e) {
+            frame.toBack();
+        }
+    }
+
+    private boolean isOpenTableFrame(JInternalFrame frame,
+            TableFrame excludedFrame) {
+        return frame instanceof TableFrame
+                && frame != excludedFrame
+                && frame.getDesktopPane() == this
+                && frame.isVisible()
+                && !frame.isClosed();
     }
 
     public ECUEditor getEditor() {

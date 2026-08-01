@@ -83,7 +83,6 @@ public class SettingsForm extends JFrame implements MouseListener {
         reset.addMouseListener(this);
 
         tableClickCount.setBackground(Color.WHITE);
-        tableClickBehavior.setBackground(Color.WHITE);
     }
 
     private void initSettings() {
@@ -120,11 +119,6 @@ public class SettingsForm extends JFrame implements MouseListener {
             tableClickCount.setSelectedIndex(1);
         }
 
-        if(1 == settings.getTableClickBehavior()) { // open/focus
-            tableClickBehavior.setSelectedIndex(1);
-        } else { // open/close
-            tableClickBehavior.setSelectedIndex(0);
-        }
         chckbxSortTree.setSelected(settings.isTableTreeSorted());
 
         valueLimitWarning.setSelected(settings.isValueLimitWarning());
@@ -211,7 +205,6 @@ public class SettingsForm extends JFrame implements MouseListener {
         chckbxColorAxis = new javax.swing.JCheckBox();
         editorIconsPanel = new javax.swing.JPanel();
         tableIconsPanel = new javax.swing.JPanel();
-        tableClickBehavior = new javax.swing.JComboBox();
         labelTableClick = new javax.swing.JLabel();
         tableClickCount = new javax.swing.JComboBox();
         chckbxSortTree = new javax.swing.JCheckBox();
@@ -595,31 +588,25 @@ public class SettingsForm extends JFrame implements MouseListener {
                         .addPreferredGap(ComponentPlacement.RELATED)
                         .addComponent(chckbxOpenTablesAt)
                         .addPreferredGap(ComponentPlacement.RELATED, 12, Short.MAX_VALUE)
-                        .addComponent(panelTreeSettings, GroupLayout.PREFERRED_SIZE, 94, GroupLayout.PREFERRED_SIZE))
+                        .addComponent(panelTreeSettings, GroupLayout.PREFERRED_SIZE, 70, GroupLayout.PREFERRED_SIZE))
                 );
 
         labelTableClick.setText(rb.getString("CTOT"));
         tableClickCount.setModel(new javax.swing.DefaultComboBoxModel(
                 new String[]{rb.getString("SINGLE"), rb.getString("DOUBLE")}));
-        tableClickBehavior.setModel(new DefaultComboBoxModel(
-                new String[] {rb.getString("OPENCLOSE"), rb.getString("OPENFOCUS")}));
         chckbxSortTree.setText(rb.getString("STLABEL"));
         chckbxSortTree.setToolTipText(rb.getString("STLABELTT"));
 
-        lblClickBehavior = new JLabel(rb.getString("TCB"));
         GroupLayout gl_panelTreeSettings = new GroupLayout(panelTreeSettings);
         gl_panelTreeSettings.setHorizontalGroup(
                 gl_panelTreeSettings.createParallelGroup(Alignment.LEADING)
                 .addGroup(gl_panelTreeSettings.createSequentialGroup()
                         .addGroup(gl_panelTreeSettings.createParallelGroup(Alignment.LEADING)
                                 .addComponent(tableClickCount, 0, 72, Short.MAX_VALUE)
-                                .addComponent(tableClickBehavior, 0, 86, Short.MAX_VALUE)
-
                                 )
                                 .addPreferredGap(ComponentPlacement.RELATED)
                                 .addGroup(gl_panelTreeSettings.createParallelGroup(Alignment.LEADING)
                                         .addComponent(labelTableClick)
-                                        .addComponent(lblClickBehavior)
                                         .addGap(200)
                                         )
                         ).addComponent(chckbxSortTree, 0, 100, Short.MAX_VALUE)
@@ -631,13 +618,9 @@ public class SettingsForm extends JFrame implements MouseListener {
                                 .addComponent(labelTableClick)
                                 .addComponent(tableClickCount, GroupLayout.PREFERRED_SIZE, 18, GroupLayout.PREFERRED_SIZE)
                                 )
-                                .addPreferredGap(ComponentPlacement.RELATED)
-                                .addGroup(gl_panelTreeSettings.createParallelGroup(Alignment.BASELINE)
-                                        .addComponent(lblClickBehavior)
-                                        .addComponent(tableClickBehavior, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
-                                        )
-                                        .addContainerGap(23, Short.MAX_VALUE)
-                                        .addComponent(chckbxSortTree, GroupLayout.PREFERRED_SIZE, 18, GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(ComponentPlacement.UNRELATED)
+                                .addComponent(chckbxSortTree, GroupLayout.PREFERRED_SIZE, 18, GroupLayout.PREFERRED_SIZE)
+                                .addContainerGap(GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                           )
                 );
         panelTreeSettings.setLayout(gl_panelTreeSettings);
@@ -995,11 +978,6 @@ public class SettingsForm extends JFrame implements MouseListener {
 
         getEditor().getImageList().setToggleClickCount(getSettings().getTableClickCount());
 
-        if(1 == tableClickBehavior.getSelectedIndex()) { // open/close frame
-            getSettings().setTableClickBehavior(1);
-        } else { // open/focus frame
-            getSettings().setTableClickBehavior(0);
-        }
         getSettings().setTableTreeSorted(chckbxSortTree.isSelected());
 
         getSettings().setValueLimitWarning(valueLimitWarning.isSelected());
@@ -1099,7 +1077,6 @@ public class SettingsForm extends JFrame implements MouseListener {
     private javax.swing.JLabel selectColor;
     private javax.swing.JLabel increaseColor;
     private javax.swing.JLabel labelTableClick;
-    private javax.swing.JLabel lblClickBehavior;
     private javax.swing.JTabbedPane settingsTabbedPane;
     private javax.swing.JPanel jPanelDefault;
     private javax.swing.JPanel jPanelClipboard;
@@ -1142,7 +1119,6 @@ public class SettingsForm extends JFrame implements MouseListener {
     private javax.swing.JCheckBox chckbxShowTableToolbar;
     private javax.swing.JCheckBox chckbxOpenRomNode;
     private JPanel panelTreeSettings;
-    private javax.swing.JComboBox tableClickBehavior;
     private javax.swing.JCheckBox chckbxOpenTablesAt;
     private javax.swing.JTextField defaultScale;
     private javax.swing.JComboBox comboBoxDefaultScale;

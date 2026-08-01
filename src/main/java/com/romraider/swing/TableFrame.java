@@ -350,6 +350,10 @@ public class TableFrame extends JInternalFrame implements InternalFrameListener,
     @Override
     public void internalFrameClosed(InternalFrameEvent e) {
         setMacCloseShortcutActive(false);
+        Table table = getTable();
+        if (table != null && table.getTableFrame() == this) {
+            table.setTableFrame(null);
+        }
     }
     @Override
     public void internalFrameIconified(InternalFrameEvent e) {}

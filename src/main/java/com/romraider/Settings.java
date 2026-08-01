@@ -203,7 +203,6 @@ public class Settings implements Serializable {
     private Color axisColor = new Color(255, 255, 255);
     private Color warningColor = new Color(255, 0, 0);
     private int tableClickCount = 1; // number of clicks to open table
-    private int tableClickBehavior = 0; // TableTreeNode click behavior. 0=open/close frame, 1=open/focus frame
     private boolean sortTableTree = false; // false - Table Tree is in definition order, true - alphabetical
     private boolean colorAxis = false;
 
@@ -497,16 +496,6 @@ public class Settings implements Serializable {
 
     public void setTableClickCount(int tableClickCount) {
         this.tableClickCount = tableClickCount;
-    }
-
-    public int getTableClickBehavior() {
-        return tableClickBehavior;
-    }
-
-    public void setTableClickBehavior(int clickBehavior) {
-        // 0 = open/close
-        // 1 = open/focus
-        this.tableClickBehavior = clickBehavior;
     }
 
     public String getRecentVersion() {

@@ -45,7 +45,6 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowEvent;
 import java.beans.PropertyChangeEvent;
-import java.beans.PropertyVetoException;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.ByteArrayOutputStream;
@@ -59,6 +58,7 @@ import java.util.List;
 import java.util.ResourceBundle;
 import java.util.Vector;
 
+import javax.swing.BorderFactory;
 import javax.swing.ImageIcon;
 import javax.swing.JCheckBox;
 import javax.swing.JFileChooser;
@@ -114,6 +114,8 @@ import com.romraider.xml.ConversionLayer.ConversionLayer;
 
 public class ECUEditor extends AbstractFrame {
     private static final long serialVersionUID = -7826850987392016292L;
+    private static final int TOOLBAR_LEFT_PADDING = 8;
+    private static final int TOOLBAR_VERTICAL_OFFSET = 2;
     protected static final ResourceBundle rb = new ResourceUtil().getBundle(
             ECUEditor.class.getName());
 
@@ -196,9 +198,11 @@ public class ECUEditor extends AbstractFrame {
         tableToolBar = new TableToolBar();
 
         CustomToolbarLayout toolBarLayout = new CustomToolbarLayout(
-                FlowLayout.LEFT, 0, 0);
+                FlowLayout.LEFT, 0, 0, TOOLBAR_VERTICAL_OFFSET);
 
         toolBarPanel.setLayout(toolBarLayout);
+        toolBarPanel.setBorder(BorderFactory.createEmptyBorder(
+                0, TOOLBAR_LEFT_PADDING, 0, 0));
         toolBarPanel.add(toolBar);
         toolBarPanel.add(tableToolBar);
         toolBarPanel.setVisible(true);
@@ -429,32 +433,7 @@ public class ECUEditor extends AbstractFrame {
     
     private void handleAlreadyOpenTable(TableFrame frame)
     {
-        // table is already open.
-        if(1 == settings.getTableClickBehavior()) { // open/focus frame
-            // table is already open, so set focus on the frame.
-            boolean selected = true;
-            frame.toFront();
-            try {
-                frame.setSelected(true);
-            } catch (PropertyVetoException e) {
-                frame.toBack();
-                selected = false;
-            }
-            if(selected) {
-                frame.requestFocusInWindow();
-            }
-        } else {
-        	// default to open/close frame
-            // table is already open, so close the frame.
-            rightPanel.remove(frame);
-            frame.getTable().setTableFrame(null);
-            try {
-                frame.setClosed(true);
-            } catch (PropertyVetoException e) {
-                 // Do nothing.
-            }
-            frame.dispose();
-        }
+        rightPanel.activateTableFrame(frame);
     }
     
     public static TableView getTableViewForTable(Table t)
@@ -510,12 +489,18 @@ public class ECUEditor extends AbstractFrame {
         TableFrame frame = node.getFrame();
 
         // check if frame has been added.
-        if (frame != null)
+        if (frame != null
+                && frame.getDesktopPane() == rightPanel
+                && frame.isVisible()
+                && !frame.isClosed())
         {
         	handleAlreadyOpenTable(frame);
         }
         else
         {
+            if (frame != null) {
+                node.getTable().setTableFrame(null);
+            }
         	openClosedTable(node);
         }
         
@@ -524,10 +509,9 @@ public class ECUEditor extends AbstractFrame {
     }
 
     public void removeDisplayTable(TableFrame frame) {
-        frame.setVisible(false);
-        rightPanel.remove(frame);
-        rightPanel.validate();
+        TableFrame nextFrame = rightPanel.closeTableFrame(frame);
         refreshUI();
+        rightPanel.activateTableFrame(nextFrame);
     }
 
     public void closeImage() {
@@ -622,9 +606,9 @@ public class ECUEditor extends AbstractFrame {
 
     public void refreshUI()
     {
-        imageList.updateUI();
+        imageList.revalidate();
         imageList.repaint();
-        rightPanel.updateUI();
+        rightPanel.revalidate();
         rightPanel.repaint();
 
         if(getToolBar() != null)

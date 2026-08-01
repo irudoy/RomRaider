@@ -176,11 +176,6 @@ public final class DOMSettingsBuilder {
         tableClickCount.setAttribute("value", String.valueOf(settings.getTableClickCount()));
         options.appendChild(tableClickCount);
 
-        // table click behavior
-        IIOMetadataNode tableClickBehavior = new IIOMetadataNode("tableclickbehavior");
-        tableClickBehavior.setAttribute("value", String.valueOf(settings.getTableClickBehavior()));
-        options.appendChild(tableClickBehavior);
-
         // table tree sorting
         IIOMetadataNode tableTreeSorted = new IIOMetadataNode("tabletreesorted");
         tableTreeSorted.setAttribute("value", String.valueOf(settings.isTableTreeSorted()));

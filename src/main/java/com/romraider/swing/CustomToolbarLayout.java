@@ -9,9 +9,61 @@ import java.awt.Insets;
 public class CustomToolbarLayout extends FlowLayout {
 
     private static final long serialVersionUID = 1L;
+    private final int verticalOffset;
 
     public CustomToolbarLayout(int align, int hgap, int vgap) {
+        this(align, hgap, vgap, 0);
+    }
+
+    public CustomToolbarLayout(int align, int hgap, int vgap,
+            int verticalOffset) {
         super(align, hgap, vgap);
+        this.verticalOffset = verticalOffset;
+    }
+
+    @Override
+    public void layoutContainer(Container target) {
+        synchronized (target.getTreeLock()) {
+            super.layoutContainer(target);
+
+            Insets insets = target.getInsets();
+            int contentTop = Integer.MAX_VALUE;
+            int contentBottom = Integer.MIN_VALUE;
+            int componentCount = target.getComponentCount();
+
+            for (int i = 0; i < componentCount; i++) {
+                Component component = target.getComponent(i);
+                if (component.isVisible()) {
+                    contentTop = Math.min(contentTop, component.getY());
+                    contentBottom = Math.max(
+                            contentBottom,
+                            component.getY() + component.getHeight());
+                }
+            }
+
+            if (contentTop == Integer.MAX_VALUE) {
+                return;
+            }
+
+            int availableHeight = target.getHeight()
+                    - insets.top - insets.bottom;
+            int contentHeight = contentBottom - contentTop;
+            if (availableHeight < contentHeight) {
+                return;
+            }
+
+            int centeredTop = insets.top
+                    + (availableHeight - contentHeight + 1) / 2
+                    + verticalOffset;
+            int offset = centeredTop - contentTop;
+            for (int i = 0; i < componentCount; i++) {
+                Component component = target.getComponent(i);
+                if (component.isVisible()) {
+                    component.setLocation(
+                            component.getX(), component.getY() + offset);
+                }
+            }
+        }
     }
 
     @Override
