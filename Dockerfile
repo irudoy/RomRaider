@@ -7,6 +7,9 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         ca-certificates \
+        fontconfig \
+        fonts-dejavu-core \
+        libharfbuzz0b \
         openjdk-17-jdk-headless \
         unzip && \
     apt-get install -y --no-install-recommends \
