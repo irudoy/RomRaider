@@ -40,9 +40,9 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 import java.util.ResourceBundle;
 import java.util.Vector;
-import java.util.regex.PatternSyntaxException;
 
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
@@ -135,15 +135,19 @@ public class Rom extends DefaultMutableTreeNode implements Serializable  {
     	return refreshDisplayedTables(null);
     }
     
-    /*
-     * Refreshes the list of tables for a rom. Takes a regex (or null) as input for filtering.
-     * Outputs a list of paths that should be expanded based on the filter.
+    /**
+     * Refreshes the list of tables for a ROM. The optional filter is matched
+     * as a case-insensitive substring of each table name.
+     *
+     * @return category paths that should be expanded for filtered results
      */
     public List<TreePath> refreshDisplayedTables(String filterText) {
         super.removeAllChildren();
 
         Settings settings = SettingsManager.getSettings();
-        boolean shouldFilter = filterText != null && !filterText.isEmpty();
+        String normalizedFilter = filterText == null
+                ? "" : filterText.toLowerCase(Locale.ROOT);
+        boolean shouldFilter = !normalizedFilter.isEmpty();
         boolean anyTablesAdded = false;
 
         // Collect TreePaths for expansion
@@ -152,21 +156,17 @@ public class Rom extends DefaultMutableTreeNode implements Serializable  {
         for (TableTreeNode tableTreeNode : tableNodes.values()) {
             Table table = tableTreeNode.getTable();
 
-            boolean addToTree = true;
-            if (shouldFilter) {
-                try {
-                    addToTree = table.getName().toLowerCase().contains(filterText.toLowerCase());
-                } catch (PatternSyntaxException exception) {
-                    addToTree = false;
-                }
+            String tableName = table.getName();
+            if (shouldFilter && (tableName == null
+                    || !tableName.toLowerCase(Locale.ROOT)
+                            .contains(normalizedFilter))) {
+                continue;
             }
-
-            if (!addToTree) continue;
-            anyTablesAdded = true;
 
             String[] categories = table.getCategory().split("//");
 
             if (settings.isDisplayHighTables() || settings.getUserLevel() >= table.getUserLevel()) {
+                anyTablesAdded = true;
                 DefaultMutableTreeNode currentParent = this;
 
                 for (int i = 0; i < categories.length; i++) {

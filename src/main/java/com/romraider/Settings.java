@@ -279,9 +279,13 @@ public class Settings implements Serializable {
     /**
      * Sets if we search for the ELM327 on startup (small delay)
      */
-	private Boolean searchElm327 = false;
+    private Boolean searchElm327 = false;
 
     public Settings() {
+        if (java.awt.GraphicsEnvironment.isHeadless()) {
+            return;
+        }
+
         //center window by default
         Dimension screenSize = java.awt.Toolkit.getDefaultToolkit().getScreenSize();
         windowLocation.move(((int) (screenSize.getWidth() - windowSize.getWidth()) / 2),

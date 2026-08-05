@@ -68,7 +68,7 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTextArea;
-import javax.swing.SwingWorker;
+import javax.swing.SwingUtilities;
 import javax.swing.TransferHandler;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.tree.TreePath;
@@ -125,6 +125,8 @@ public class ECUEditor extends AbstractFrame {
     private final RomTreeRootNode imageRoot = new RomTreeRootNode(
             rb.getString("OPENIMAGES"));
     private final RomTree imageList = new RomTree(imageRoot);
+    private final RomFilterPanel romFilterPanel =
+            new RomFilterPanel(imageRoot, imageList);
     private final MDIDesktopPane rightPanel = new MDIDesktopPane();
     private final JProgressPane statusPanel = new JProgressPane();
     private final JScrollPane leftScrollPane;
@@ -136,7 +138,6 @@ public class ECUEditor extends AbstractFrame {
     private TableToolBar tableToolBar;
     private final JPanel toolBarPanel = new JPanel();
     private OpenImageWorker openImageWorker;
-    private SetUserLevelWorker setUserLevelWorker;
     private final ImageIcon editorIcon = ABOUT_ICON;
     private final Settings settings = SettingsManager.getSettings();
 
@@ -159,7 +160,7 @@ public class ECUEditor extends AbstractFrame {
 
         JPanel leftAreaWithFilterBox = new JPanel(new BorderLayout());
         leftAreaWithFilterBox.add(leftScrollPane, BorderLayout.CENTER);
-        leftAreaWithFilterBox.add(new RomFilterPanel(imageRoot, imageList), BorderLayout.SOUTH);
+        leftAreaWithFilterBox.add(romFilterPanel, BorderLayout.SOUTH);
         
         splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT,
         		leftAreaWithFilterBox, rightScrollPane);
@@ -582,11 +583,21 @@ public class ECUEditor extends AbstractFrame {
     }
 
     public void setUserLevel(int userLevel) {
+        if (!SwingUtilities.isEventDispatchThread()) {
+            SwingUtilities.invokeLater(() -> setUserLevel(userLevel));
+            return;
+        }
+
         setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
-        settings.setUserLevel(userLevel);
-        setUserLevelWorker = new SetUserLevelWorker();
-        setUserLevelWorker.addPropertyChangeListener(getStatusPanel());
-        setUserLevelWorker.execute();
+        try {
+            settings.setUserLevel(userLevel);
+            SettingsManager.save(settings, statusPanel);
+            romFilterPanel.refreshDisplayedTables();
+            refreshUI();
+        } finally {
+            statusPanel.update(rb.getString("STATUSREADY"), 0);
+            setCursor(null);
+        }
     }
 
     public Vector<Rom> getImages() {
@@ -701,35 +712,5 @@ public class ECUEditor extends AbstractFrame {
 
     public JScrollPane getRightScrollPane() {
         return this.rightScrollPane;
-    }
-}
-
-class SetUserLevelWorker extends SwingWorker<Void, Void> {
-
-    @Override
-    protected Void doInBackground() throws Exception {
-        for(Rom rom : ECUEditorManager.getECUEditor().getImages()) {
-            rom.refreshDisplayedTables();
-        }
-        return null;
-    }
-
-    public void propertyChange(PropertyChangeEvent evnt)
-    {
-        SwingWorker<?, ?> source = (SwingWorker<?, ?>) evnt.getSource();
-        if (null != source && "state".equals( evnt.getPropertyName() )
-                && (source.isDone() || source.isCancelled() ) )
-        {
-            source.removePropertyChangeListener(ECUEditorManager.getECUEditor().getStatusPanel());
-        }
-    }
-
-    @Override
-    public void done() {
-        ECUEditor editor = ECUEditorManager.getECUEditor();
-        editor.getStatusPanel().setStatus(ECUEditor.rb.getString("STATUSREADY"));
-        setProgress(0);
-        editor.setCursor(null);
-        editor.refreshUI();
     }
 }
