@@ -389,7 +389,7 @@ public class ECUEditor extends AbstractFrame {
         input.refreshDisplayedTables();
 
         // add to ecu image list pane
-        getImageRoot().add(input);
+        getImageList().insertRom(input);
 
         getImageList().setVisible(true);
         getImageList().expandPath(new TreePath(getImageRoot()));
@@ -405,6 +405,7 @@ public class ECUEditor extends AbstractFrame {
         // Only set if no other rom has been selected.
         if(null == getLastSelectedRom()) {
             setLastSelectedRom(input);
+            getImageList().setSelectionPath(new TreePath(input.getPath()));
         }
 
         if (input.getRomID().isObsolete() && settings.isObsoleteWarning()) {
@@ -515,33 +516,32 @@ public class ECUEditor extends AbstractFrame {
     }
 
     public void closeImage() {
-        Rom rom = getLastSelectedRom();
-        ECUEditor editor = ECUEditorManager.getECUEditor();
-        RomTreeRootNode imageRoot = editor.getImageRoot();
-
-        rom.removeFromParent();
-
-        if (imageRoot.getChildCount() > 0) {
-            editor.setLastSelectedRom((Rom) imageRoot.getChildAt(0));
-        } else {
-            editor.setLastSelectedRom(null);
-        }
-
-        editor.getStatusPanel().setStatus(ECUEditor.rb.getString("STATUSREADY"));
-        editor.setCursor(null);
-        editor.refreshAfterNewRom();
-
-        rom.clearData();
+        closeImage(getLastSelectedRom());
     }
 
     public void closeAllImages() {
         while (imageRoot.getChildCount() > 0) {
-            closeImage();
+            closeImage((Rom) imageRoot.getChildAt(0));
         }
     }
 
+    private void closeImage(Rom rom) {
+        if (rom == null || !imageList.containsRom(rom)) {
+            return;
+        }
+
+        Rom nextRom = imageList.removeRom(rom);
+        setLastSelectedRom(nextRom);
+        rom.clearData();
+
+        statusPanel.setStatus(rb.getString("STATUSREADY"));
+        setCursor(null);
+        refreshAfterNewRom();
+    }
+
     public Rom getLastSelectedRom() {
-        return lastSelectedRom;
+        return imageList.containsRom(lastSelectedRom)
+                ? lastSelectedRom : null;
     }
 
     public String getLastSelectedRomFileName() {
@@ -550,6 +550,9 @@ public class ECUEditor extends AbstractFrame {
     }
 
     public void setLastSelectedRom(Rom lastSelectedRom) {
+        if (lastSelectedRom != null && !imageList.containsRom(lastSelectedRom)) {
+            return;
+        }
         this.lastSelectedRom = lastSelectedRom;
         if (lastSelectedRom == null) {
             setTitle(titleText);

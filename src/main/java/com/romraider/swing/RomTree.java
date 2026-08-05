@@ -32,6 +32,7 @@ import javax.swing.JTree;
 import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
 import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreePath;
 
 import com.romraider.editor.ecu.ECUEditor;
@@ -46,13 +47,17 @@ public class RomTree extends JTree implements MouseListener {
     private transient boolean mousePressCaptured;
 
     public RomTree(DefaultMutableTreeNode input) {
+        this(input, SettingsManager.getSettings().getTableClickCount());
+    }
+
+    RomTree(DefaultMutableTreeNode input, int tableClickCount) {
         super(input);
         setRootVisible(false);
         setRowHeight(0);
         addMouseListener(this);
         setCellRenderer(new RomCellRenderer());
         setFont(new Font("Tahoma", Font.PLAIN, 11));
-        setToggleClickCount(SettingsManager.getSettings().getTableClickCount());
+        setToggleClickCount(tableClickCount);
 
         // key binding actions
         Action tableSelectAction = new AbstractAction() {
@@ -81,6 +86,53 @@ public class RomTree extends JTree implements MouseListener {
 
     public ECUEditor getEditor() {
         return ECUEditorManager.getECUEditor();
+    }
+
+    public void insertRom(Rom rom) {
+        insertRootNode(rom);
+    }
+
+    void insertRootNode(DefaultMutableTreeNode node) {
+        DefaultMutableTreeNode root = getRootNode();
+        getTreeModel().insertNodeInto(node, root, root.getChildCount());
+    }
+
+    public boolean containsRom(Rom rom) {
+        return rom != null && getRootNode().getIndex(rom) >= 0;
+    }
+
+    public Rom removeRom(Rom rom) {
+        return (Rom) removeRootNode(rom);
+    }
+
+    DefaultMutableTreeNode removeRootNode(DefaultMutableTreeNode node) {
+        DefaultMutableTreeNode root = getRootNode();
+        int removedIndex = root.getIndex(node);
+        if (removedIndex < 0) {
+            return null;
+        }
+
+        clearSelection();
+        getTreeModel().removeNodeFromParent(node);
+        if (root.getChildCount() == 0) {
+            return null;
+        }
+
+        int nextIndex = Math.min(removedIndex, root.getChildCount() - 1);
+        DefaultMutableTreeNode nextNode =
+                (DefaultMutableTreeNode) root.getChildAt(nextIndex);
+        TreePath nextPath = new TreePath(nextNode.getPath());
+        setSelectionPath(nextPath);
+        scrollPathToVisible(nextPath);
+        return nextNode;
+    }
+
+    private DefaultMutableTreeNode getRootNode() {
+        return (DefaultMutableTreeNode) getTreeModel().getRoot();
+    }
+
+    private DefaultTreeModel getTreeModel() {
+        return (DefaultTreeModel) getModel();
     }
 
     @Override
