@@ -137,6 +137,16 @@
         <!-- package naming properties -->
         <property name="jar.package" value="${name.package}.jar" />
 
+        <!-- JogAmp Java3D, downloaded once into a cache outside the build tree -->
+        <property name="maven.central" value="https://repo1.maven.org/maven2" />
+        <property name="jogamp.dir" value="${basedir}/lib/jogamp" />
+        <property name="java3d.version" value="1.7.2" />
+        <property name="jogamp.version" value="2.6.0" />
+        <property name="jogamp.natives.windows" value="windows-amd64" />
+        <property name="jogamp.natives.linux" value="linux-amd64" />
+        <property name="java3d.dir" value="${build.dir}/java3d" />
+        <property name="graph3d.adapted" value="${java3d.dir}/Graph3d.jar" />
+
         <path id="windows.classpath">
             <fileset dir="lib/common" includes="*.jar" />
             <fileset dir="lib/windows" includes="*.jar" />
@@ -149,7 +159,7 @@
 
         <path id="junit_compile.classpath">
             <path refid="linux.classpath" />
-            <pathelement location="${build.dir}/linux/lib/${jar.package}" />
+            <pathelement location="${build.dir}/linux/package/${jar.package}" />
             <pathelement location="lib/testing/junit.jar" />
             <pathelement location="lib/testing/hamcrest.jar" />
         </path>
@@ -217,10 +227,10 @@
     <!-- =================================================================== -->
     <!-- Build jar files                                                     -->
     <!-- =================================================================== -->
-    <target name="build-linux" depends="compile-linux" description="Build the Jar file for Linux">
+    <target name="build-linux" depends="compile-linux, -java3d-graph3d" description="Build the Jar file for Linux">
         <macro_jar os="${os.linux}" basedir="${classes.dir}"/>
     </target>
-    <target name="build-windows" depends="compile-windows" description="Build the Jar file for Windows">
+    <target name="build-windows" depends="compile-windows, -java3d-graph3d" description="Build the Jar file for Windows">
         <macro_jar os="${os.windows}" basedir="${classes.dir}"/>
     </target>
     <target name="build" depends="build-windows, build-linux" description="Build the Jar files for Linux and Windows"/>
@@ -270,6 +280,106 @@
     </target>
 
     <!-- =================================================================== -->
+    <!-- JogAmp Java3D                                                       -->
+    <!--   The Graph3d library is built against the discontinued Java3D 1.5  -->
+    <!--   packages, whose Windows and X11 classes reach into sun.awt and    -->
+    <!--   are rejected on Java 17. Its bytecode is relocated onto JogAmp    -->
+    <!--   Java3D, which every package then carries together with the JOGL   -->
+    <!--   natives of its operating system.                                  -->
+    <!-- =================================================================== -->
+    <target name="-java3d" depends="-init">
+        <mkdir dir="${jogamp.dir}" />
+        <macro_fetch_artifact
+            path="org/jogamp/java3d/java3d-core/${java3d.version}"
+            file="java3d-core-${java3d.version}.jar"
+            sha256="894b00e177da90590deec06274ec7410db0c7fe8cfdb75af4013fd4a83c4b95b" />
+        <macro_fetch_artifact
+            path="org/jogamp/java3d/java3d-utils/${java3d.version}"
+            file="java3d-utils-${java3d.version}.jar"
+            sha256="194f3ec7a857c883fe4704a56c510fb769cfaec9a2eb48f5942a247eb5d82f03" />
+        <macro_fetch_artifact
+            path="org/jogamp/java3d/vecmath/${java3d.version}"
+            file="vecmath-${java3d.version}.jar"
+            sha256="4bb77e7ec930c6e59be3533ced4597a4c43b5eee2262f9f9bc147cadb2ff7f5b" />
+        <macro_fetch_artifact
+            path="org/jogamp/gluegen/gluegen-rt/${jogamp.version}"
+            file="gluegen-rt-${jogamp.version}.jar"
+            sha256="465bbc8d410b872a76b5b901cdb9c2c07905edd5e61a7120dc6a4d007880ec2f" />
+        <macro_fetch_artifact
+            path="org/jogamp/jogl/jogl-all/${jogamp.version}"
+            file="jogl-all-${jogamp.version}.jar"
+            sha256="34c919bc6073c2d9e73cbe7558c4e9de6b5c58146f3658e2bcc5f23ec3fccc9f" />
+        <macro_fetch_artifact
+            path="org/jogamp/joal/joal/${jogamp.version}"
+            file="joal-${jogamp.version}.jar"
+            sha256="ac50705ca328ddb7664882fce582306b88722f936b81642f8c384fd707de57ce" />
+        <macro_fetch_artifact
+            path="org/jogamp/gluegen/gluegen-rt/${jogamp.version}"
+            file="gluegen-rt-${jogamp.version}-natives-${jogamp.natives.windows}.jar"
+            sha256="c7c9138606858fed0b1650a2444cc1bc96599cc635a8d879979a37646e8594b1" />
+        <macro_fetch_artifact
+            path="org/jogamp/jogl/jogl-all/${jogamp.version}"
+            file="jogl-all-${jogamp.version}-natives-${jogamp.natives.windows}.jar"
+            sha256="33081ebfac520d7d283830a614f458f728104bef4eff56b52f604ee8c5af90c8" />
+        <macro_fetch_artifact
+            path="org/jogamp/joal/joal/${jogamp.version}"
+            file="joal-${jogamp.version}-natives-${jogamp.natives.windows}.jar"
+            sha256="5367cb899601ddbf5ff45aa23060edf5ec8267e356bc9126fb97d0642fe0e8a1" />
+        <macro_fetch_artifact
+            path="org/jogamp/gluegen/gluegen-rt/${jogamp.version}"
+            file="gluegen-rt-${jogamp.version}-natives-${jogamp.natives.linux}.jar"
+            sha256="d500a38dedcbd6dfa89c5ae943a22d1051b1dbf1502f8544337bbe57d118f2c5" />
+        <macro_fetch_artifact
+            path="org/jogamp/jogl/jogl-all/${jogamp.version}"
+            file="jogl-all-${jogamp.version}-natives-${jogamp.natives.linux}.jar"
+            sha256="3d0ed2674059fc207166ce1351de8d30e0b6102af12ca8b84fbf1bc3f246038a" />
+        <macro_fetch_artifact
+            path="org/jogamp/joal/joal/${jogamp.version}"
+            file="joal-${jogamp.version}-natives-${jogamp.natives.linux}.jar"
+            sha256="146d01038cdf7c556c06edfaa2f4dec110c9872d52b36c01abb340d61bc7523c" />
+    </target>
+
+    <target name="-java3d-graph3d" depends="-java3d">
+        <mkdir dir="${java3d.dir}/adapter" />
+        <javac
+            failonerror="true"
+            srcdir="${basedir}/tools/build"
+            destdir="${java3d.dir}/adapter"
+            release="${javac.release}"
+            includeantruntime="false"
+            debug="${debug}"
+            deprecation="${deprecation}"
+            encoding="UTF-8" />
+        <java
+            classname="com.romraider.build.Java3dBytecodeAdapter"
+            classpath="${java3d.dir}/adapter"
+            fork="true"
+            failonerror="true">
+            <arg file="lib/common/Graph3d.jar" />
+            <arg file="${graph3d.adapted}" />
+        </java>
+
+        <delete dir="${java3d.dir}/verify" />
+        <unzip src="${graph3d.adapted}" dest="${java3d.dir}/verify" />
+        <fileset id="graph3d.legacy" dir="${java3d.dir}/verify" includes="**/*.class">
+            <contains text="javax/media/j3d" />
+        </fileset>
+        <fileset id="graph3d.jogamp" dir="${java3d.dir}/verify" includes="**/*.class">
+            <contains text="org/jogamp/java3d" />
+        </fileset>
+        <fail message="Graph3d.jar still refers to the discontinued Java3D packages">
+            <condition>
+                <resourcecount refid="graph3d.legacy" when="greater" count="0" />
+            </condition>
+        </fail>
+        <fail message="Graph3d.jar was not relocated onto JogAmp Java3D">
+            <condition>
+                <resourcecount refid="graph3d.jogamp" when="equal" count="0" />
+            </condition>
+        </fail>
+    </target>
+
+    <!-- =================================================================== -->
     <!-- create standalone ZIP                                               -->
     <!-- =================================================================== -->
     <target name="standalone" depends="rebuild, unittest"
@@ -287,15 +397,60 @@
     <!-- =================================================================== -->
     <!-- Macros                                                              -->
     <!-- =================================================================== -->
+    <macrodef name="macro_fetch_artifact">
+        <attribute name="path" />
+        <attribute name="file" />
+        <attribute name="sha256" />
+        <sequential>
+            <local name="artifact.verified" />
+            <get src="${maven.central}/@{path}/@{file}"
+                 dest="${jogamp.dir}/@{file}"
+                 skipexisting="true" />
+            <checksum file="${jogamp.dir}/@{file}"
+                      algorithm="SHA-256"
+                      property="@{sha256}"
+                      verifyproperty="artifact.verified" />
+            <fail message="SHA-256 mismatch for @{file}">
+                <condition>
+                    <isfalse value="${artifact.verified}" />
+                </condition>
+            </fail>
+        </sequential>
+    </macrodef>
+
+    <macrodef name="macro_common_libs">
+        <attribute name="os" />
+        <sequential>
+            <delete dir="${build.dir}/@{os}/package/lib/common" />
+            <mkdir dir="${build.dir}/@{os}/package/lib/common" />
+            <copy todir="${build.dir}/@{os}/package/lib/common">
+                <fileset dir="lib/common"
+                         excludes="Graph3d.jar j3dcore.jar j3dutils.jar vecmath.jar" />
+                <fileset file="${graph3d.adapted}" />
+                <fileset dir="${jogamp.dir}">
+                    <include name="java3d-core-${java3d.version}.jar" />
+                    <include name="java3d-utils-${java3d.version}.jar" />
+                    <include name="vecmath-${java3d.version}.jar" />
+                    <include name="gluegen-rt-${jogamp.version}.jar" />
+                    <include name="jogl-all-${jogamp.version}.jar" />
+                    <include name="joal-${jogamp.version}.jar" />
+                    <include name="gluegen-rt-${jogamp.version}-natives-${jogamp.natives.@{os}}.jar" />
+                    <include name="jogl-all-${jogamp.version}-natives-${jogamp.natives.@{os}}.jar" />
+                    <include name="joal-${jogamp.version}-natives-${jogamp.natives.@{os}}.jar" />
+                </fileset>
+            </copy>
+        </sequential>
+    </macrodef>
+
     <macrodef name="macro_jar">
         <attribute name="os" />
         <attribute name="basedir" />
         <sequential>
-            <mkdir dir="${build.dir}/@{os}/lib" />
-            <manifestclasspath property="@{os}.jar.classpath" jarfile="${jar.package}">
+            <macro_common_libs os="@{os}" />
+            <manifestclasspath property="@{os}.jar.classpath"
+                               jarfile="${build.dir}/@{os}/package/${jar.package}">
                 <classpath>
-                    <fileset dir="lib/common" includes="*.jar" />
-                    <fileset dir="lib/@{os}" includes="*.jar" />
+                    <fileset dir="${build.dir}/@{os}/package/lib/common" includes="*.jar" />
                 </classpath>
             </manifestclasspath>
             <manifest file="${build.dir}/@{os}/MANIFEST.MF">
@@ -303,7 +458,7 @@
                 <attribute name="Main-Class" value="${class.start}" />
                 <attribute name="Class-Path" value="${@{os}.jar.classpath}" />
             </manifest>
-            <jar basedir="@{basedir}" destfile="${build.dir}/@{os}/lib/${jar.package}"
+            <jar basedir="@{basedir}" destfile="${build.dir}/@{os}/package/${jar.package}"
                  manifest="${build.dir}/@{os}/MANIFEST.MF">
                  <fileset dir="${src.res.dir}">
                     <include name="**/*.*" />
@@ -342,14 +497,15 @@
         <attribute name="os" />
         <sequential>
             <zip destfile="${dist.dir}/@{os}/${name.package}${version.major}.${version.minor}.${version.patch}${version.extra}${version.extra1}-@{os}.zip">
-                <zipfileset file="build/@{os}/lib/${jar.package}" prefix="${name.package}" />
+                <zipfileset file="${build.dir}/@{os}/package/${jar.package}" prefix="${name.package}" />
                 <zipfileset file="scripts/run.${ext.@{os}}" prefix="${name.package}" filemode="755" />
                 <zipfileset file="license.txt" prefix="${name.package}" />
                 <zipfileset file="release_notes.txt" prefix="${name.package}" />
                 <zipfileset file="lib/log4j.properties" prefix="${name.package}/lib"/>
                 <zipfileset dir="plugins" prefix="${name.package}/plugins" />
-                <zipfileset dir="lib/common" prefix="${name.package}/lib/common" />
-                <zipfileset dir="lib/@{os}" prefix="${name.package}/lib/@{os}" />
+                <zipfileset dir="${build.dir}/@{os}/package/lib/common" prefix="${name.package}/lib/common" />
+                <zipfileset dir="lib/@{os}" prefix="${name.package}/lib/@{os}"
+                            excludes="**/j3dcore*.dll **/libj3dcore*.so" />
                 <zipfileset dir="src" prefix="${name.package}/src" excludes="**/*.template" />
                 <zipfileset dir="customize" prefix="${name.package}/customize"/>
                 <zipfileset dir="i18n" prefix="${name.package}/i18n"/>

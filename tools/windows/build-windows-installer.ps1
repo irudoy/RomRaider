@@ -209,8 +209,13 @@ try {
     if (-not (Test-Path -LiteralPath (Join-Path $payloadDir 'RomRaiderHD.jar'))) {
         Fail 'standalone archive does not contain RomRaiderHD/RomRaiderHD.jar'
     }
-    if (-not (Test-Path -LiteralPath (Join-Path $payloadDir 'lib\windows\64\j3dcore-ogl.dll'))) {
+    if (-not (Test-Path -LiteralPath (Join-Path $payloadDir 'lib\windows\64\phidget21.dll'))) {
         Fail 'the standalone archive does not carry the 64-bit native libraries'
+    }
+    $joglNatives = @(Get-ChildItem -LiteralPath (Join-Path $payloadDir 'lib\common') `
+            -Filter 'jogl-all-*-natives-windows-amd64.jar' -ErrorAction SilentlyContinue)
+    if ($joglNatives.Count -ne 1) {
+        Fail 'the standalone archive does not carry the JOGL natives for windows-amd64'
     }
 
     # Start Menu shortcuts drive the bundled runtime; run.bat serves the ZIP.

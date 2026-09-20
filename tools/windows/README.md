@@ -69,6 +69,6 @@ Settings and definitions live in `%USERPROFILE%\.RomRaider`. Console output is
 appended to `%USERPROFILE%\.RomRaider\romraider_sout.log`, and the application
 log is written to `%USERPROFILE%\.RomRaider\rr_system.log`.
 
-The 3D table view depends on the legacy Java3D libraries in `lib\common`,
-which need a JOGL 1.x installation that the packages do not carry. The macOS
-application replaces them with JogAmp Java3D; the Windows packages do not.
+The 3D table view runs on JogAmp Java3D 1.7.2 with the JOGL 2.6.0 natives for
+`windows-amd64`, both carried in `lib\common`. No separate Java3D or OpenGL
+installation is needed.

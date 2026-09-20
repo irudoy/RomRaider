@@ -26,9 +26,9 @@ Use `--app` to select another destination. `--source` and
 `ROMRAIDER_JAVA_HOME` selects the ARM64 JDK 17+ compiler and runtime.
 
 The installer performs a clean Ant standalone build, verifies Java 17
-bytecode, replaces the legacy Java3D libraries with JogAmp builds, runs theme
-and real-window 3D smoke tests, creates the Retina icon set, and signs the
-application bundle locally.
+bytecode, swaps the JOGL natives of the standalone package for the macOS
+universal ones, runs theme and real-window 3D smoke tests, creates the Retina
+icon set, and signs the application bundle locally.
 
 ## Appearance
 

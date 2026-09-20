@@ -41,6 +41,11 @@ The packages are written below build/dist. The all and standalone targets
 run the test suite and stop when a test fails. Use ant help to list the
 available targets.
 
+The build downloads JogAmp Java3D 1.7.2 and JOGL 2.6.0 from Maven Central
+into lib/jogamp, verifies each artifact against its SHA-256 checksum and
+relocates the Graph3d bytecode onto those packages. The cache survives ant
+clean, so only the first build needs network access.
+
 XDF integration test
 --------------------
 

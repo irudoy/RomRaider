@@ -10,7 +10,6 @@ launcher_source="${script_dir}/RomRaiderHD"
 info_plist_source="${script_dir}/Info.plist"
 app_icon_source="${script_dir}/romraiderhd-app.png"
 smoke_test_source="${script_dir}/ThemeSmokeTest.java"
-java3d_adapter_source="${script_dir}/Java3dBytecodeAdapter.java"
 graph3d_smoke_test_source="${script_dir}/Graph3dSmokeTest.java"
 build_runtime=true
 launch_app=false
@@ -118,8 +117,6 @@ done
 	fail "RomRaiderHD app icon not found at ${app_icon_source}"
 [[ -f "${smoke_test_source}" ]] ||
 	fail "theme smoke test not found at ${smoke_test_source}"
-[[ -f "${java3d_adapter_source}" ]] ||
-	fail "Java3D bytecode adapter not found at ${java3d_adapter_source}"
 [[ -f "${graph3d_smoke_test_source}" ]] ||
 	fail "Java3D smoke test not found at ${graph3d_smoke_test_source}"
 [[ -x /usr/bin/pgrep ]] || fail "pgrep is required"
@@ -250,81 +247,33 @@ done
 	"${iconset_dir}" \
 	-o "${new_app}/Contents/Resources/RomRaiderHD.icns"
 
-java3d_build_dir="${stage_dir}/java3d-build"
-java3d_download_dir="${java3d_build_dir}/downloads"
-java3d_adapter_classes="${java3d_build_dir}/adapter-classes"
-java3d_adapted_dir="${java3d_build_dir}/adapted"
-legacy_java3d_dir="${java3d_build_dir}/legacy"
-/bin/mkdir -p \
-	"${java3d_download_dir}" \
-	"${java3d_adapter_classes}" \
-	"${java3d_adapted_dir}" \
-	"${legacy_java3d_dir}"
+java3d_download_dir="${stage_dir}/java3d-natives"
+/bin/mkdir -p "${java3d_download_dir}"
 
-download_artifact \
-	"org/jogamp/java3d/java3d-core/1.7.2/java3d-core-1.7.2.jar" \
-	"894b00e177da90590deec06274ec7410db0c7fe8cfdb75af4013fd4a83c4b95b" \
-	"${java3d_download_dir}/java3d-core-1.7.2.jar"
-download_artifact \
-	"org/jogamp/java3d/java3d-utils/1.7.2/java3d-utils-1.7.2.jar" \
-	"194f3ec7a857c883fe4704a56c510fb769cfaec9a2eb48f5942a247eb5d82f03" \
-	"${java3d_download_dir}/java3d-utils-1.7.2.jar"
-download_artifact \
-	"org/jogamp/java3d/vecmath/1.7.2/vecmath-1.7.2.jar" \
-	"4bb77e7ec930c6e59be3533ced4597a4c43b5eee2262f9f9bc147cadb2ff7f5b" \
-	"${java3d_download_dir}/vecmath-1.7.2.jar"
-download_artifact \
-	"org/jogamp/gluegen/gluegen-rt/2.6.0/gluegen-rt-2.6.0.jar" \
-	"465bbc8d410b872a76b5b901cdb9c2c07905edd5e61a7120dc6a4d007880ec2f" \
-	"${java3d_download_dir}/gluegen-rt-2.6.0.jar"
 download_artifact \
 	"org/jogamp/gluegen/gluegen-rt/2.6.0/gluegen-rt-2.6.0-natives-macosx-universal.jar" \
 	"e543d5e81bc8b8f63e5dc365ac47da009f82175b2c6eba16a24ce3b2eb031773" \
 	"${java3d_download_dir}/gluegen-rt-2.6.0-natives-macosx-universal.jar"
 download_artifact \
-	"org/jogamp/jogl/jogl-all/2.6.0/jogl-all-2.6.0.jar" \
-	"34c919bc6073c2d9e73cbe7558c4e9de6b5c58146f3658e2bcc5f23ec3fccc9f" \
-	"${java3d_download_dir}/jogl-all-2.6.0.jar"
-download_artifact \
 	"org/jogamp/jogl/jogl-all/2.6.0/jogl-all-2.6.0-natives-macosx-universal.jar" \
 	"81db6a2b50f3803d4307a8bd7570a4f78c41ae0d44361208d0885a5cdf289dfa" \
 	"${java3d_download_dir}/jogl-all-2.6.0-natives-macosx-universal.jar"
-download_artifact \
-	"org/jogamp/joal/joal/2.6.0/joal-2.6.0.jar" \
-	"ac50705ca328ddb7664882fce582306b88722f936b81642f8c384fd707de57ce" \
-	"${java3d_download_dir}/joal-2.6.0.jar"
 download_artifact \
 	"org/jogamp/joal/joal/2.6.0/joal-2.6.0-natives-macosx-universal.jar" \
 	"3cdaefb36713d1fc71740fa9ce07cb3713c582fa7c5ac80c527e439f031ae853" \
 	"${java3d_download_dir}/joal-2.6.0-natives-macosx-universal.jar"
 
-"${java_home}/bin/javac" \
-	--release 17 \
-	-d "${java3d_adapter_classes}" \
-	"${java3d_adapter_source}"
-"${java_home}/bin/java" \
-	-classpath "${java3d_adapter_classes}" \
-	com.romraider.build.Java3dBytecodeAdapter \
-	"${runtime_dir}/lib/common/Graph3d.jar" \
-	"${java3d_adapted_dir}/Graph3d.jar"
-
-for legacy_java3d in Graph3d.jar j3dcore.jar j3dutils.jar vecmath.jar; do
-	[[ -f "${runtime_dir}/lib/common/${legacy_java3d}" ]] ||
-		fail "legacy Java3D library ${legacy_java3d} is missing"
-	/bin/mv \
-		"${runtime_dir}/lib/common/${legacy_java3d}" \
-		"${legacy_java3d_dir}/${legacy_java3d}"
+for linux_natives in \
+	gluegen-rt-2.6.0-natives-linux-amd64.jar \
+	jogl-all-2.6.0-natives-linux-amd64.jar \
+	joal-2.6.0-natives-linux-amd64.jar; do
+	[[ -f "${runtime_dir}/lib/common/${linux_natives}" ]] ||
+		fail "standalone archive does not carry ${linux_natives}"
+	/bin/rm "${runtime_dir}/lib/common/${linux_natives}"
 done
 /bin/cp \
-	"${java3d_adapted_dir}/Graph3d.jar" \
-	"${java3d_download_dir}/java3d-core-1.7.2.jar" \
-	"${java3d_download_dir}/java3d-utils-1.7.2.jar" \
-	"${java3d_download_dir}/vecmath-1.7.2.jar" \
-	"${java3d_download_dir}/gluegen-rt-2.6.0.jar" \
 	"${java3d_download_dir}/gluegen-rt-2.6.0-natives-macosx-universal.jar" \
-	"${java3d_download_dir}/jogl-all-2.6.0.jar" \
 	"${java3d_download_dir}/jogl-all-2.6.0-natives-macosx-universal.jar" \
-	"${java3d_download_dir}/joal-2.6.0.jar" \
 	"${java3d_download_dir}/joal-2.6.0-natives-macosx-universal.jar" \
 	"${runtime_dir}/lib/common/"
 
