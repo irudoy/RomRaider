@@ -100,6 +100,17 @@ public final class GenericDataSourceManager implements ExternalDataSource {
             LOGGER.trace("Connect count [" + dataSource.getName() + "]: " + connectCount);
     }
 
+    /**
+     * Disconnects the data source whatever the number of data items that
+     * hold it connected. The data items selected in a Logger are discarded
+     * with it and never give up their hold.
+     */
+    public synchronized void release() {
+        if (connectCount == 0) return;
+        connectCount = 0;
+        doDisconnect();
+    }
+
     private void doConnect() {
         Stoppable connector = new GenericDataSourceConnector(dataSource);
         connectors.add(connector);

@@ -37,6 +37,13 @@ public class Table2D extends Table {
         return axis;
     }
 
+    @Override
+    public void setTableView(TableView v) {
+        super.setTableView(v);
+        // live Logger data reaches the axis view through the axis table
+        axis.setTableView(v == null ? null : ((Table2DView) v).getAxis());
+    }
+
     public void setAxis(Table1D axis) {
         this.axis = axis;
         axis.setAxisParent(this);

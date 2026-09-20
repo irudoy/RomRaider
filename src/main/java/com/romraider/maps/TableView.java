@@ -917,6 +917,8 @@ public abstract class TableView extends JPanel implements Serializable {
     }
 
     public void clearLiveDataTrace() {
+        // a view that hides its cells has none to clear
+        if (data == null) return;
         for (DataCellView cell : data) {
             cell.setLiveDataTrace(false);
             cell.setPreviousLiveDataTrace(false);

@@ -20,6 +20,8 @@
 package com.romraider.logger.ecu.comms.manager;
 
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.Vector;
 
 import org.apache.log4j.Logger;
@@ -32,6 +34,7 @@ public class AsyncDataUpdateHandler extends Thread {
 
     Vector<Response> responsesToUpdate = new Vector<Response>();
 	DataUpdateHandler[] handlers;
+	private final Set<String> reported = new HashSet<String>();
 	private  boolean stop = false;
 	private volatile boolean isRunning = false;
 	
@@ -53,7 +56,15 @@ public class AsyncDataUpdateHandler extends Thread {
 	    			r = responsesToUpdate.get(0);
 	    			
 		    	   for(DataUpdateHandler handler: handlers) {
-		    		   handler.handleDataUpdate(r);
+		    		   try {
+		    			   handler.handleDataUpdate(r);
+		    		   } catch (RuntimeException e) {
+		    			   // a failing handler leaves the others and the next responses running
+		    			   final String failure = handler.getClass().getName() + e.getClass().getName();
+		    			   if (reported.add(failure)) {
+		    				   LOGGER.error("Data update handler error, reported once", e);
+		    			   }
+		    		   }
 		    	   }	
 		    	   
 		    	   responsesToUpdate.remove(0);		    	   

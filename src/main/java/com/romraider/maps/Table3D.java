@@ -50,6 +50,15 @@ public class Table3D extends Table {
         return (Table3DView) tableView;
     }
 
+    @Override
+    public void setTableView(TableView v) {
+        super.setTableView(v);
+        // live Logger data reaches an axis view through its axis table
+        final Table3DView view = (Table3DView) v;
+        xAxis.setTableView(view == null ? null : view.getXAxis());
+        yAxis.setTableView(view == null ? null : view.getYAxis());
+    }
+
     public Table1D getXAxis() {
         return xAxis;
     }

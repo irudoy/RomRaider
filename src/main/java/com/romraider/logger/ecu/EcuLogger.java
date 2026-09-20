@@ -19,8 +19,6 @@
 
 package com.romraider.logger.ecu;
 
-import com.romraider.net.BrowserControl;
-import static com.romraider.Version.LOGGER_DEFS_URL;
 import static com.romraider.Version.PRODUCT_NAME;
 import static com.romraider.Version.VERSION;
 import static com.romraider.logger.ecu.profile.UserProfileLoader.BACKUP_PROFILE;
@@ -44,7 +42,6 @@ import static javax.swing.BorderFactory.createLoweredBevelBorder;
 import static javax.swing.JComponent.WHEN_IN_FOCUSED_WINDOW;
 import static javax.swing.JOptionPane.DEFAULT_OPTION;
 import static javax.swing.JOptionPane.ERROR_MESSAGE;
-import static javax.swing.JOptionPane.INFORMATION_MESSAGE;
 import static javax.swing.JOptionPane.WARNING_MESSAGE;
 import static javax.swing.JOptionPane.showMessageDialog;
 import static javax.swing.JOptionPane.showOptionDialog;
@@ -190,6 +187,7 @@ import com.romraider.logger.external.core.ExternalDataItem;
 import com.romraider.logger.external.core.ExternalDataSource;
 import com.romraider.logger.external.core.ExternalDataSourceLoader;
 import com.romraider.logger.external.core.ExternalDataSourceLoaderImpl;
+import com.romraider.logger.external.core.GenericDataSourceManager;
 import com.romraider.swing.AbstractFrame;
 import com.romraider.swing.SetFont;
 import com.romraider.theme.HiDpiIconScaler;
@@ -576,7 +574,9 @@ public final class EcuLogger extends AbstractFrame implements MessageListener {
         String loggerConfigFilePath = getSettings().getLoggerDefinitionFilePath();
         if (isNullOrEmpty(loggerConfigFilePath))
         	{
-        		showMissingConfigDialog();
+        		// external data sources log without a Logger definition
+        		LOGGER.info("Logger definition not configured, logging external data sources only");
+        		reportMessage(rb.getString("EXTERNALSONLY"));
         		getSettings().setLogExternalsOnly(true);
         	}
         else {
@@ -642,27 +642,6 @@ public final class EcuLogger extends AbstractFrame implements MessageListener {
                 null,
                 options,
                 options[0]);
-    }
-
-    private void showMissingConfigDialog() {
-        Object[] options = {rb.getString("YES"), rb.getString("NO")};
-        int answer = showOptionDialog(this,
-                rb.getString("LOGGERDEFNOTCFG"),
-                rb.getString("LOGGERCONFIG"),
-                DEFAULT_OPTION,
-                WARNING_MESSAGE,
-                null,
-                options,
-                options[0]);
-        if (answer == 0) {
-            BrowserControl.displayURL(LOGGER_DEFS_URL);
-        } else {
-            showMessageDialog(this,
-                    rb.getString("CFGEDFSMENU"),
-                    rb.getString("LOGGERCONFIG"),
-                    INFORMATION_MESSAGE);
-            reportError("Logger definition file not found");
-        }
     }
 
     private void loadLoggerPlugins() {
@@ -1047,7 +1026,10 @@ public final class EcuLogger extends AbstractFrame implements MessageListener {
         tabbedPane.addChangeListener(new ChangeListener() {
             @Override
             public void stateChanged(ChangeEvent e) {
-                if(tabbedPane.getSelectedComponent() == dynoTab.getPanel())
+                // the Dyno tab reads ECU parameters, so a cars definition has
+                // no use until a Logger definition is configured
+                if(tabbedPane.getSelectedComponent() == dynoTab.getPanel()
+                        && !isNullOrEmpty(getSettings().getLoggerDefinitionFilePath()))
                 {
                 	((DynoTabImpl)dynoTab).getDynoControlPanel().checkDynoDefs();
                 }
@@ -1891,7 +1873,12 @@ public final class EcuLogger extends AbstractFrame implements MessageListener {
     private void stopPlugins() {
         for (ExternalDataSource dataSource : externalDataSources) {
             try {
-                dataSource.disconnect();
+                if (dataSource instanceof GenericDataSourceManager) {
+                    // one disconnect gives up the hold of one data item
+                    ((GenericDataSourceManager) dataSource).release();
+                } else {
+                    dataSource.disconnect();
+                }
             } catch (Exception e) {
                 LOGGER.warn("Error stopping datasource: " + dataSource.getName(), e);
             }
