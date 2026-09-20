@@ -48,16 +48,45 @@ function Invoke-Native {
     }
 }
 
+function Get-JavaSettings {
+    param(
+        [Parameter(Mandatory = $true)] [string] $JavaExe
+    )
+
+    $outFile = [System.IO.Path]::GetTempFileName()
+    $errFile = [System.IO.Path]::GetTempFileName()
+    try {
+        $probe = Start-Process -FilePath $JavaExe -PassThru -Wait -NoNewWindow `
+            -ArgumentList @('-XshowSettings:properties', '-version') `
+            -RedirectStandardOutput $outFile -RedirectStandardError $errFile
+        if ($probe.ExitCode -ne 0) {
+            Fail "$JavaExe exited with code $($probe.ExitCode) while reporting its properties"
+        }
+        $settings = @(
+            @(Get-Content -LiteralPath $errFile) + @(Get-Content -LiteralPath $outFile) |
+                Where-Object { $_ -and $_.Trim() }
+        )
+    } finally {
+        Remove-Item -LiteralPath $outFile, $errFile -Force -ErrorAction SilentlyContinue
+    }
+
+    if ($settings.Count -eq 0) {
+        Fail "$JavaExe printed no properties"
+    }
+    return $settings
+}
+
 function Read-JavaProperty {
     param(
-        [Parameter(Mandatory = $true)] [string[]] $Properties,
+        [Parameter(Mandatory = $true)] [string[]] $Settings,
         [Parameter(Mandatory = $true)] [string] $Name
     )
 
-    $match = $Properties |
+    $match = $Settings |
         Select-String -Pattern ('^\s*' + [regex]::Escape($Name) + '\s*=\s*(\S+)') |
         Select-Object -First 1
     if (-not $match) {
+        Write-Host ($Settings -join [System.Environment]::NewLine)
         Fail "the Java runtime did not report $Name"
     }
     return $match.Matches[0].Groups[1].Value
@@ -98,18 +127,9 @@ foreach ($tool in @($javaExe, $jlinkExe)) {
     }
 }
 
-$probeFile = [System.IO.Path]::GetTempFileName()
-try {
-    & $javaExe -XshowSettings:properties -version 2> $probeFile | Out-Null
-    if ($LASTEXITCODE -ne 0) {
-        Fail "$javaExe failed to report its properties"
-    }
-    $javaProperties = @(Get-Content -LiteralPath $probeFile)
-} finally {
-    Remove-Item -LiteralPath $probeFile -Force -ErrorAction SilentlyContinue
-}
-$javaSpec = Read-JavaProperty -Properties $javaProperties -Name 'java.specification.version'
-$javaArch = Read-JavaProperty -Properties $javaProperties -Name 'os.arch'
+$javaSettings = Get-JavaSettings -JavaExe $javaExe
+$javaSpec = Read-JavaProperty -Settings $javaSettings -Name 'java.specification.version'
+$javaArch = Read-JavaProperty -Settings $javaSettings -Name 'os.arch'
 $javaMajor = [int](($javaSpec -split '\.')[0])
 if ($javaMajor -lt 17) {
     Fail "JDK version is $javaSpec, expected 17 or newer"
@@ -232,17 +252,8 @@ try {
         }
     }
 
-    $runtimeProbe = [System.IO.Path]::GetTempFileName()
-    try {
-        & $bundledJava -XshowSettings:properties -version 2> $runtimeProbe | Out-Null
-        if ($LASTEXITCODE -ne 0) {
-            Fail 'the bundled runtime does not start'
-        }
-        $runtimeProperties = @(Get-Content -LiteralPath $runtimeProbe)
-    } finally {
-        Remove-Item -LiteralPath $runtimeProbe -Force -ErrorAction SilentlyContinue
-    }
-    $runtimeSpec = Read-JavaProperty -Properties $runtimeProperties `
+    $runtimeSettings = Get-JavaSettings -JavaExe $bundledJava
+    $runtimeSpec = Read-JavaProperty -Settings $runtimeSettings `
         -Name 'java.specification.version'
     if ([int](($runtimeSpec -split '\.')[0]) -lt 17) {
         Fail "the bundled runtime reports Java $runtimeSpec"
