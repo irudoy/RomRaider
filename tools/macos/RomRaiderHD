@@ -43,7 +43,7 @@ if [[ "${java_arch}" != "aarch64" ||
 	exit 1
 fi
 
-if [[ ! -f "${runtime_dir}/RomRaider.jar" ]]; then
+if [[ ! -f "${runtime_dir}/RomRaiderHD.jar" ]]; then
 	/usr/bin/osascript \
 		-e 'display alert "The RomRaiderHD runtime is incomplete." message "Reinstall RomRaiderHD with tools/macos/install-macos-app.sh." as critical' \
 		>/dev/null 2>&1 || true
@@ -109,6 +109,6 @@ exec "${java_home}/bin/java" \
 	-Xmx512M \
 	-XX:-UseParallelGC \
 	-XX:CompileThreshold=10000 \
-	-classpath 'RomRaider.jar:lib/common/*' \
+	-classpath 'RomRaiderHD.jar:lib/common/*' \
 	com.romraider.theme.RomRaiderBootstrap \
 	"$@" >>"${log_file}" 2>&1

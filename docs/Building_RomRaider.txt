@@ -60,6 +60,20 @@ The Dockerfile provides the same Java 17 and Ant environment used by CI:
         --volume "$PWD:/home/romraider/RomRaider" \
         romraider-builder ant all
 
+Windows installer
+-----------------
+
+The Windows installer requires a 64-bit JDK 17 or newer and NSIS 3. Build it
+from the repository root:
+
+    tools\windows\build-windows-installer.ps1
+
+The setup executable is written to build\dist\windows next to the standalone
+ZIP. It installs RomRaiderHD together with a Java runtime linked by jlink, so
+the installed application does not need a system Java installation. Use
+-SkipBuild to package an existing standalone build. See tools/windows/README.md
+for options and for what the installer places on the system.
+
 macOS Apple Silicon application
 -------------------------------
 

@@ -11,7 +11,7 @@ jobs:
   packages:
     name: Windows and Linux packages
     runs-on: windows-latest
-    timeout-minutes: 20
+    timeout-minutes: 40
 
     steps:
       - uses: actions/checkout@v7
@@ -30,6 +30,29 @@ jobs:
 
       - name: Run tests and build standalone packages
         run: ant standalone
+
+      - name: Ensure NSIS is available
+        shell: pwsh
+        run: |
+          $onPath = Get-Command makensis.exe -ErrorAction SilentlyContinue
+          $installed = Test-Path "${env:ProgramFiles(x86)}\NSIS\makensis.exe"
+          if (-not $onPath -and -not $installed) {
+            choco install nsis --yes --no-progress
+          }
+
+      - name: Build Windows installer
+        shell: pwsh
+        run: .\tools\windows\build-windows-installer.ps1 -SkipBuild
+
+      - name: Store Windows installer
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-windows-installer
+          path: build/dist/windows/*-setup.exe
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 1
 
       - name: Store Windows release package
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
@@ -138,8 +161,9 @@ jobs:
           set -euo pipefail
           shopt -s nullglob
           assets=(release-assets/*)
-          [[ "${#assets[@]}" -eq 3 ]]
+          [[ "${#assets[@]}" -eq 4 ]]
           [[ "$(find release-assets -maxdepth 1 -type f -name '*-windows.zip' | wc -l)" -eq 1 ]]
+          [[ "$(find release-assets -maxdepth 1 -type f -name '*-setup.exe' | wc -l)" -eq 1 ]]
           [[ "$(find release-assets -maxdepth 1 -type f -name '*-linux.zip' | wc -l)" -eq 1 ]]
           [[ -f release-assets/RomRaiderHD-macos-arm64.zip ]]
 
@@ -157,11 +181,13 @@ jobs:
           Commit: ${GITHUB_SHA}
 
           Packages:
+          - Windows installer with a bundled Java runtime
           - Windows standalone ZIP
           - Linux standalone ZIP
           - macOS Apple Silicon application ZIP
 
-          Java 17 or newer is required."
+          The Windows installer carries its own Java runtime. The standalone
+          ZIP packages and the macOS application require Java 17 or newer."
 
           if release_is_draft="$(gh release view "$release_tag" \
             --repo "$GITHUB_REPOSITORY" \

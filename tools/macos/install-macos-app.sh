@@ -192,7 +192,7 @@ if "${build_runtime}"; then
 fi
 
 shopt -s nullglob
-archives=("${source_dir}"/build/dist/linux/RomRaider*-linux.zip)
+archives=("${source_dir}"/build/dist/linux/RomRaiderHD*-linux.zip)
 shopt -u nullglob
 [[ "${#archives[@]}" -eq 1 ]] ||
 	fail "expected one Linux standalone archive, found ${#archives[@]}"
@@ -219,11 +219,11 @@ new_app="${stage_dir}/RomRaiderHD.app"
 	"${new_app}/Contents/MacOS" \
 	"${new_app}/Contents/Resources"
 /usr/bin/ditto -x -k "${archive}" "${extract_dir}"
-[[ -f "${extract_dir}/RomRaider/RomRaider.jar" ]] ||
-	fail "standalone archive does not contain RomRaider/RomRaider.jar"
+[[ -f "${extract_dir}/RomRaiderHD/RomRaiderHD.jar" ]] ||
+	fail "standalone archive does not contain RomRaiderHD/RomRaiderHD.jar"
 
 /bin/mv \
-	"${extract_dir}/RomRaider" \
+	"${extract_dir}/RomRaiderHD" \
 	"${new_app}/Contents/Resources/RomRaiderHD"
 /bin/cp "${info_plist_source}" "${new_app}/Contents/Info.plist"
 /bin/cp "${launcher_source}" "${new_app}/Contents/MacOS/RomRaiderHD"
@@ -332,7 +332,7 @@ smoke_classes="${stage_dir}/smoke-classes"
 /bin/mkdir -p "${smoke_classes}"
 "${java_home}/bin/javac" \
 	--release 17 \
-	-classpath "${runtime_dir}/RomRaider.jar:${runtime_dir}/lib/common/*" \
+	-classpath "${runtime_dir}/RomRaiderHD.jar:${runtime_dir}/lib/common/*" \
 	-d "${smoke_classes}" \
 	"${smoke_test_source}" \
 	"${graph3d_smoke_test_source}"
@@ -345,14 +345,14 @@ for theme_class in \
 	com.romraider.theme.MacHiDpiBootstrap \
 	com.romraider.theme.RomRaiderBootstrap; do
 	"${java_home}/bin/javap" \
-		-classpath "${runtime_dir}/RomRaider.jar:${runtime_dir}/lib/common/*" \
+		-classpath "${runtime_dir}/RomRaiderHD.jar:${runtime_dir}/lib/common/*" \
 		"${theme_class}" >/dev/null
 done
 
 bytecode_signature="${stage_dir}/bytecode.txt"
 "${java_home}/bin/javap" \
 	-verbose \
-	-classpath "${runtime_dir}/RomRaider.jar:${runtime_dir}/lib/common/*" \
+	-classpath "${runtime_dir}/RomRaiderHD.jar:${runtime_dir}/lib/common/*" \
 	com.romraider.Settings >"${bytecode_signature}"
 /usr/bin/grep -q \
 	"major version: 61" \
@@ -362,7 +362,7 @@ bytecode_signature="${stage_dir}/bytecode.txt"
 graph3d_signature="${stage_dir}/graph3d-signature.txt"
 "${java_home}/bin/javap" \
 	-private \
-	-classpath "${runtime_dir}/RomRaider.jar:${runtime_dir}/lib/common/*" \
+	-classpath "${runtime_dir}/RomRaiderHD.jar:${runtime_dir}/lib/common/*" \
 	com.ecm.graphics.Graph3dJPanel >"${graph3d_signature}"
 /usr/bin/grep -q \
 	"org.jogamp.java3d.Canvas3D canvas3d" \
@@ -373,7 +373,7 @@ graph3d_signature="${stage_dir}/graph3d-signature.txt"
 	cd "${runtime_dir}"
 	"${java_home}/bin/java" \
 		-Djava.awt.headless=true \
-		-classpath "RomRaider.jar:lib/common/*:${smoke_classes}" \
+		-classpath "RomRaiderHD.jar:lib/common/*:${smoke_classes}" \
 		ThemeSmokeTest
 )
 (
@@ -385,7 +385,7 @@ graph3d_signature="${stage_dir}/graph3d-signature.txt"
 		-Dcom.apple.macos.useScreenMenuBar=true \
 		-Djava.awt.headless=false \
 		-Dsun.java2d.opengl=false \
-		-classpath "RomRaider.jar:lib/common/*:${smoke_classes}" \
+		-classpath "RomRaiderHD.jar:lib/common/*:${smoke_classes}" \
 		com.romraider.build.Graph3dSmokeTest
 )
 
