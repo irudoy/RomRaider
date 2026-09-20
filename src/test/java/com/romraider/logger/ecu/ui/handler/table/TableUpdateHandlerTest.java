@@ -46,8 +46,9 @@ import com.romraider.logger.ecu.definition.ExternalDataImpl;
 import com.romraider.logger.ecu.definition.LoggerData;
 import com.romraider.logger.external.udp.plugin.UdpDataItem;
 import com.romraider.logger.external.udp.plugin.UdpDataSource;
-import com.romraider.maps.Rom;
 import com.romraider.maps.RomID;
+import com.romraider.maps.DataCell;
+import com.romraider.maps.Rom;
 import com.romraider.maps.Table;
 import com.romraider.maps.Table1D;
 import com.romraider.maps.Table1DView;
@@ -60,6 +61,7 @@ import com.romraider.swing.JProgressPane;
 public class TableUpdateHandlerTest {
     private static final String SPEED = "X_VQ_Engine_Speed";
     private static final String LOAD = "X_VQ_Engine_Load";
+    private static final String COOLANT = "X_VQ_Coolant_Temperature";
     // speed axis 10, 20, 30; load axis 40, 50; six data cells
     private static final byte[] IMAGE = {10, 20, 30, 40, 50, 1, 2, 3, 4, 5, 6};
     private Table registered;
@@ -125,6 +127,44 @@ public class TableUpdateHandlerTest {
 
         table.setTableView(null);
         assertNull(table.getAxis().getTableView());
+    }
+
+    @Test
+    public void loggerDataMovesTheLiveCellAlongAStaticAxis() throws Exception {
+        final Table2D table = new Table2D();
+        table.setName("Threshold");
+        table.setStorageAddress(0);
+        table.setStorageType(1);
+        table.setEndian(Settings.Endian.BIG);
+        final Table1D labels = new Table1D();
+        labels.setName("Coolant Temperature [deg C]");
+        labels.setLogParam(COOLANT);
+        labels.setDataSize(3);
+        labels.setData(new DataCell[3]);
+        for (String label : new String[] {"-40", "20", "80"}) {
+            labels.addStaticDataCell(label);
+        }
+        table.setAxis(labels);
+        table.setDataSize(3);
+        // an axis of reviewed labels carries the parameter of a 2D table
+        assertTrue(table.isLiveDataSupported());
+
+        final Rom rom = new Rom(new RomID());
+        rom.setFileName("image.bin");
+        rom.addTableByName(table);
+        rom.populateTables(IMAGE, new JProgressPane());
+        TableUpdateHandler.getInstance().deregisterTable(table);
+
+        final Table2DView view = new Table2DView(table);
+        table.setTableView(view);
+        view.populateTableVisual();
+        view.setOverlayLog(true);
+        TableUpdateHandler.getInstance().registerTable(table);
+        registered = table;
+
+        update(COOLANT, 74.0);
+
+        assertEquals(2, view.getAxis().getLiveDataIndex());
     }
 
     @Test
