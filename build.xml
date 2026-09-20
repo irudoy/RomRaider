@@ -35,12 +35,11 @@
         <echo message="help        [Print this message                     ]" />
         <echo message="clean       [Clean generated files                  ]" />
         <echo message="prepare     [Create directories for output files    ]" />
-        <echo message="            [  and generate files from templates    ]" />
+        <echo message="            [  and generate the Version class       ]" />
         <echo message="build       [Compile the Java source files          ]" />
         <echo message="rebuild     [Call the clean and build targets       ]" />
         <echo message="javadoc     [Generate the API documentation of the  ]" />
         <echo message="            [  Java source code                     ]" />
-        <echo message="installer   [Create the installation packages       ]" />
         <echo message="standalone  [Create the ZIP packages                ]" />
         <echo message="all         [Complete rebuild and packaging         ]" />
         <echo message="unittest    [Run all unit tests                     ]" />
@@ -107,10 +106,6 @@
             <os family="windows" />
         </condition>
 
-        <condition property="is.windows">
-            <equals arg1="${os}" arg2="${os.windows}" />
-        </condition>
-
         <!-- java compiler properties -->
         <property name="javac.release" value="17" />
         <property name="debug" value="off" />
@@ -131,8 +126,6 @@
         <property name="graphics.dir" value="${src.res.dir}/graphics" />
         <property name="docs.dir" value="${basedir}/docs" />
         <property name="build.dir" value="${basedir}/build" />
-        <property name="template.dir" value="${basedir}/templates" />
-        <property name="3rdparty.dir" value="${basedir}/3rdparty" />
 
         <!-- all generated files should go to somewhere in the build directory -->
         <property name="classes.dir" value="${build.dir}/classes" />
@@ -143,21 +136,6 @@
 
         <!-- package naming properties -->
         <property name="jar.package" value="${name.package}.jar" />
-        <property name="jar.installer-prefix"
-                  value="${name.package}${version.major}.${version.minor}.${version.patch}-${version.buildnumber}" />
-
-        <!-- support tools -->
-        <!-- creates EXE wrappers around java apps -->
-        <property name="launch4j.dir" location="${3rdparty.dir}/launch4j" />
-        <!-- installer packager -->
-        <property name="izpack.dir" value="${3rdparty.dir}/IzPack" />
-        <condition property="have.3rdparty">
-            <and>
-                <available file="${izpack.dir}/izpack-standalone-compiler.jar" />
-                <available file="${launch4j.dir}/launch4j.jar" />
-            </and>
-        </condition>
-        <property name="izpack.compile" value="${izpack.dir}/izpack-standalone-compiler.jar" />
 
         <path id="windows.classpath">
             <fileset dir="lib/common" includes="*.jar" />
@@ -186,10 +164,6 @@
             <filter token="time.year" value="${time.year}" />
             <filter token="warning.generated-file" value="${warning.generated-file}" />
             <filter token="name.package" value="${name.package}" />
-            <filter token="description.package" value="${description.package}" />
-            <filter token="name.organization" value="${name.organization}" />
-            <filter token="name.maintainer" value="${name.maintainer}" />
-            <filter token="email.maintainer" value="${email.maintainer}" />
             <filter token="supporturl" value="${supporturl}" />
             <filter token="romrevisionurl" value="${romrevisionurl}" />
             <filter token="ecudefsurl" value="${ecudefsurl}" />
@@ -204,8 +178,6 @@
             <filter token="version.extra1" value="${version.extra1}" />
             <filter token="min.logger.def.version" value="${min.logger.def.version}" />
             <filter token="build.arch" value="${build.arch}" />
-            <filter token="jvm.args.win" value="${jvm.args.win}" />
-            <filter token="jvm.args.linux" value="${jvm.args.linux}" />
         </filterset>
     </target>
 
@@ -298,47 +270,6 @@
     </target>
 
     <!-- =================================================================== -->
-    <!-- create installation                                                 -->
-    <!-- =================================================================== -->
-    <target name="-init-launch4j" depends="-init" if="have.3rdparty">
-        <taskdef name="launch4j"
-                 classname="net.sf.launch4j.ant.Launch4jTask"
-                 classpath="${launch4j.dir}/launch4j.jar:${launch4j.dir}/lib/xstream.jar" />
-    </target>
-
-    <target name="installer" depends="-init, -init-launch4j" if="have.3rdparty"
-        description="Create installation distribution packages">
-        <delete dir="${dist.dir}" failonerror="false" />
-        <mkdir dir="${dist.dir}/windows" />
-        <mkdir dir="${dist.dir}/linux" />
-        <!-- generate installer scripts from templates -->
-        <copy overwrite="true" tofile="${dist.dir}/install-windows.xml"
-              file="${template.dir}/install-windows.xml.template">
-            <filterset refid="version.filterset" />
-        </copy>
-        <copy overwrite="true" tofile="${dist.dir}/install-linux.xml" file="${template.dir}/install-linux.xml.template">
-            <filterset refid="version.filterset" />
-        </copy>
-        <copy overwrite="true" tofile="${dist.dir}/shortcutSpec-windows.xml"
-              file="${template.dir}/shortcutSpec-windows.xml.template">
-            <filterset refid="version.filterset" />
-        </copy>
-        <copy overwrite="true" tofile="${dist.dir}/shortcutSpec-linux.xml"
-              file="${template.dir}/shortcutSpec-linux.xml.template">
-            <filterset refid="version.filterset" />
-        </copy>
-        <!-- generate the launch4j scripts from templates -->
-        <copy overwrite="true" tofile="${dist.dir}/l4j-installer.xml" file="${template.dir}/l4j-installer.xml.template">
-            <filterset refid="version.filterset" />
-        </copy>
-        <copy overwrite="true" tofile="${dist.dir}/l4j-package.xml" file="${template.dir}/l4j-package.xml.template">
-            <filterset refid="version.filterset" />
-        </copy>
-
-        <macro_generate_executables/>
-    </target>
-
-    <!-- =================================================================== -->
     <!-- create standalone ZIP                                               -->
     <!-- =================================================================== -->
     <target name="standalone" depends="rebuild, unittest"
@@ -350,45 +281,12 @@
     <!-- =================================================================== -->
     <!-- all                                                                 -->
     <!-- =================================================================== -->
-    <target name="all" depends="rebuild, unittest, installer, standalone"
+    <target name="all" depends="rebuild, unittest, standalone"
         description="Compile and create distribution packages" />
 
     <!-- =================================================================== -->
     <!-- Macros                                                              -->
     <!-- =================================================================== -->
-    <macrodef name="macro_generate_executables">
-        <sequential>
-            <!-- create the exe launcher of the package for Windows -->
-            <antcall target="-launch4j">
-                <param name="type" value="package" />
-            </antcall>
-
-            <!-- generate the installers -->
-            <macro_izpack_compile os="${os}" target.os="${os.windows}" />
-            <macro_izpack_compile os="${os}" target.os="${os.linux}" />
-
-            <!-- create the exe launcher of the installer for Windows -->
-            <antcall target="-launch4j">
-                <param name="type" value="installer" />
-            </antcall>
-        </sequential>
-    </macrodef>
-
-    <target name="-launch4j" depends="-init-launch4j" if="is.windows"
-        description="Create the exe launcher of the installer or package for Windows">
-        <launch4j configFile="${dist.dir}/l4j-${type}.xml" />
-    </target>
-
-    <macrodef name="macro_izpack_compile">
-        <attribute name="os" />
-        <attribute name="target.os" />
-        <sequential>
-            <java jar="${izpack.compile}" fork="true">
-                <arg line="${dist.dir}/install-@{target.os}.xml -b . -o ${dist.dir}/@{target.os}/${jar.installer-prefix}-@{target.os}.jar -k standard" />
-            </java>
-        </sequential>
-    </macrodef>
-
     <macrodef name="macro_jar">
         <attribute name="os" />
         <attribute name="basedir" />
