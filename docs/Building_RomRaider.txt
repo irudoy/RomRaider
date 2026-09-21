@@ -46,6 +46,11 @@ into lib/jogamp, verifies each artifact against its SHA-256 checksum and
 relocates the Graph3d bytecode onto those packages. The cache survives ant
 clean, so only the first build needs network access.
 
+JOGL chooses the OpenGL pixel format through the sun.awt classes of the JDK.
+The manifest of RomRaiderHD.jar opens that package with Add-Opens, which
+covers every launch with java -jar. A launch with -classpath, for example from
+an IDE, needs the JVM option --add-opens=java.desktop/sun.awt=ALL-UNNAMED.
+
 XDF integration test
 --------------------
 

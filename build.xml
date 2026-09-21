@@ -458,6 +458,9 @@
                 <attribute name="Built-By" value="${name.maintainer}" />
                 <attribute name="Main-Class" value="${class.start}" />
                 <attribute name="Class-Path" value="${@{os}.jar.classpath}" />
+                <!-- JOGL chooses the OpenGL pixel format of the 3D table view
+                     through the sun.awt graphics configuration classes -->
+                <attribute name="Add-Opens" value="java.desktop/sun.awt" />
             </manifest>
             <jar basedir="@{basedir}" destfile="${build.dir}/@{os}/package/${jar.package}"
                  manifest="${build.dir}/@{os}/MANIFEST.MF">
