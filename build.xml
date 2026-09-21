@@ -114,6 +114,11 @@
         <property name="test.headless" value="true" />
         <property name="romraider.test.xdfDir" value="" />
 
+        <!-- CI assigns the fork release number; it takes precedence over version.properties -->
+        <condition property="version.fork" value="${env.ROMRAIDER_VERSION_FORK}">
+            <isset property="env.ROMRAIDER_VERSION_FORK" />
+        </condition>
+
         <!-- version properties are set in this file, both for the product itself and
                 for some of the external dependencies (jar files and such) -->
         <property file="version.properties" />

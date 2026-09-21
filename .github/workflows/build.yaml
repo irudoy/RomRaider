@@ -2,10 +2,18 @@ name: RomRaider build
 
 on:
   push:
+    branches:
+      - '**'
   pull_request:
 
 permissions:
   contents: read
+
+# Runs of one ref wait for each other, so every master release takes the
+# number after the previous one.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   version:
@@ -14,15 +22,16 @@ jobs:
     timeout-minutes: 5
     outputs:
       version: ${{ steps.version.outputs.version }}
+      fork: ${{ steps.version.outputs.fork }}
       publish: ${{ steps.version.outputs.publish }}
       notes: ${{ steps.version.outputs.notes }}
 
     steps:
       - uses: actions/checkout@v7
         with:
-          sparse-checkout: |
-            version.properties
-            CHANGELOG.md
+          fetch-depth: 0
+          filter: blob:none
+          sparse-checkout: version.properties
           sparse-checkout-cone-mode: false
 
       - name: Resolve version
@@ -33,48 +42,64 @@ jobs:
           property() {
             awk -F= -v key="$1" '$1 == key { print $2; exit }' version.properties
           }
-          version="$(property version.major).$(property version.minor).$(property version.patch)-hd.$(property version.fork)"
-          version_pattern='^[0-9]+\.[0-9]+\.[0-9]+-hd\.[0-9]+$'
-          if [[ ! "$version" =~ $version_pattern ]]; then
-            echo "::error::version.properties yields an invalid version: ${version}"
+          base="$(property version.major).$(property version.minor).$(property version.patch)"
+          if [[ ! "$base" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::version.properties yields an invalid base version: ${base}"
             exit 1
           fi
-          echo "version=${version}" >> "$GITHUB_OUTPUT"
-          echo "Version: ${version}"
 
           publish=false
-          if [[ "$GITHUB_EVENT_NAME" == push ]]; then
-            if [[ "$GITHUB_REF" == refs/heads/master ]]; then
-              publish=true
-            elif [[ "$GITHUB_REF" == refs/tags/* && "$GITHUB_REF_NAME" =~ $version_pattern ]]; then
-              if [[ "$GITHUB_REF_NAME" != "$version" ]]; then
-                echo "::error::Tag ${GITHUB_REF_NAME} does not match version ${version} from version.properties"
-                exit 1
-              fi
-              notes="$(awk -v version="$version" '
-                /^## / { if (found) exit; found = ($2 == version); next }
-                found { print }
-              ' CHANGELOG.md | sed -e '/./,$!d')"
-              if [[ -z "$notes" ]]; then
-                echo "::error::CHANGELOG.md has no section for ${version}"
-                exit 1
-              fi
-              delimiter="notes_${GITHUB_RUN_ID}_${RANDOM}"
-              {
-                echo "notes<<${delimiter}"
-                printf '%s\n' "$notes"
-                echo "${delimiter}"
-              } >> "$GITHUB_OUTPUT"
-              publish=true
+          fork=0
+          notes=""
+          if [[ "$GITHUB_EVENT_NAME" == push && "$GITHUB_REF" == refs/heads/master ]]; then
+            publish=true
+            # A rerun for a commit that already carries a release tag keeps it.
+            released="$(git tag --points-at HEAD --list "${base}-hd.*" | head -n 1)"
+            if [[ -n "$released" ]]; then
+              fork="${released#"${base}-hd."}"
+            else
+              highest=0
+              for tag in $(git tag --list "${base}-hd.*"); do
+                number="${tag#"${base}-hd."}"
+                if [[ "$number" =~ ^[0-9]+$ ]] && ((number > highest)); then
+                  highest="$number"
+                fi
+              done
+              fork="$((highest + 1))"
             fi
           fi
-          echo "publish=${publish}" >> "$GITHUB_OUTPUT"
+          version="${base}-hd.${fork}"
+
+          if [[ "$publish" == true ]]; then
+            previous="$(git describe --tags --abbrev=0 \
+              --match '[0-9]*-hd.[0-9]*' --exclude "$version" HEAD 2>/dev/null || true)"
+            if [[ -n "$previous" ]]; then
+              notes="$(git log --no-merges --format='- %s' "${previous}..HEAD")
+
+          Changes: https://github.com/${GITHUB_REPOSITORY}/compare/${previous}...${version}"
+            else
+              notes="Differences from upstream: https://github.com/${GITHUB_REPOSITORY}#differences-from-upstream"
+            fi
+          fi
+
+          echo "Version: ${version}"
+          delimiter="notes_${GITHUB_RUN_ID}_${RANDOM}"
+          {
+            echo "version=${version}"
+            echo "fork=${fork}"
+            echo "publish=${publish}"
+            echo "notes<<${delimiter}"
+            printf '%s\n' "$notes"
+            echo "${delimiter}"
+          } >> "$GITHUB_OUTPUT"
 
   packages:
     name: Windows and Linux packages
     needs: version
     runs-on: windows-latest
     timeout-minutes: 40
+    env:
+      ROMRAIDER_VERSION_FORK: ${{ needs.version.outputs.fork }}
 
     steps:
       - uses: actions/checkout@v7
@@ -142,6 +167,8 @@ jobs:
     needs: version
     runs-on: macos-15
     timeout-minutes: 30
+    env:
+      ROMRAIDER_VERSION_FORK: ${{ needs.version.outputs.fork }}
 
     steps:
       - uses: actions/checkout@v7
@@ -241,10 +268,14 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ needs.version.outputs.version }}
-          CHANGELOG_NOTES: ${{ needs.version.outputs.notes }}
+          NOTES: ${{ needs.version.outputs.notes }}
         run: |
           set -euo pipefail
-          packages="Packages:
+          release_tag="$VERSION"
+          release_title="RomRaiderHD ${VERSION}"
+          release_notes="${NOTES}
+
+          Packages:
           - Windows installer with a bundled Java runtime
           - Windows standalone ZIP
           - Linux standalone ZIP
@@ -252,28 +283,6 @@ jobs:
 
           The Windows installer carries its own Java runtime. The standalone
           ZIP packages and the macOS application require Java 17 or newer."
-
-          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
-            release_tag="$GITHUB_REF_NAME"
-            release_title="RomRaiderHD ${VERSION}"
-            release_notes="${CHANGELOG_NOTES}
-
-          ${packages}"
-            release_kind=(--prerelease=false --latest)
-            release_target=(--verify-tag)
-          else
-            release_tag="master-${GITHUB_SHA}"
-            short_sha="${GITHUB_SHA:0:7}"
-            release_title="RomRaiderHD master ${short_sha}"
-            release_notes="Automated prerelease built from master.
-
-          Version: ${VERSION}
-          Commit: ${GITHUB_SHA}
-
-          ${packages}"
-            release_kind=(--prerelease --latest=false)
-            release_target=(--target "$GITHUB_SHA")
-          fi
 
           if release_is_draft="$(gh release view "$release_tag" \
             --repo "$GITHUB_REPOSITORY" \
@@ -286,11 +295,11 @@ jobs:
           else
             gh release create "$release_tag" \
               --repo "$GITHUB_REPOSITORY" \
-              "${release_target[@]}" \
+              --target "$GITHUB_SHA" \
               --title "$release_title" \
               --notes "$release_notes" \
               --draft \
-              "${release_kind[@]}"
+              --latest
           fi
 
           gh release upload "$release_tag" release-assets/* \
@@ -302,4 +311,4 @@ jobs:
             --title "$release_title" \
             --notes "$release_notes" \
             --draft=false \
-            "${release_kind[@]}"
+            --latest

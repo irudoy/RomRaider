@@ -32,7 +32,8 @@ usage() {
 		'  ROMRAIDER_SOURCE_DIR  Default source tree' \
 		'  ROMRAIDER_APP_PATH    Default destination .app path' \
 		'  ROMRAIDER_JAVA_HOME   ARM64 JDK 17+ used for compilation and checks' \
-		'  ROMRAIDER_ANT         Apache Ant executable used for the build'
+		'  ROMRAIDER_ANT         Apache Ant executable used for the build' \
+		'  ROMRAIDER_VERSION_FORK  Fork release number, version.fork by default'
 }
 
 fail() {
@@ -204,13 +205,13 @@ version_minor="$(/usr/bin/awk -F= \
 version_patch="$(/usr/bin/awk -F= \
 	'$1 == "version.patch" { print $2 }' \
 	"${source_dir}/version.properties")"
-version_fork="$(/usr/bin/awk -F= \
+version_fork="${ROMRAIDER_VERSION_FORK:-$(/usr/bin/awk -F= \
 	'$1 == "version.fork" { print $2 }' \
-	"${source_dir}/version.properties")"
+	"${source_dir}/version.properties")}"
 short_version="${version_major}.${version_minor}.${version_patch}"
 full_version="${short_version}-hd.${version_fork}"
 [[ "${full_version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+-hd\.[0-9]+$ ]] ||
-	fail "version.properties yields an invalid version: ${full_version}"
+	fail "invalid RomRaiderHD version: ${full_version}"
 
 extract_dir="${stage_dir}/extract"
 new_app="${stage_dir}/RomRaiderHD.app"

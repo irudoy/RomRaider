@@ -189,6 +189,12 @@ Get-Content -LiteralPath (Join-Path $SourceDir 'version.properties') |
             $versionProperties[$Matches[1]] = $Matches[2]
         }
     }
+if ($env:ROMRAIDER_VERSION_FORK) {
+    if ($env:ROMRAIDER_VERSION_FORK -notmatch '^\d+$') {
+        Fail "ROMRAIDER_VERSION_FORK is not a number: $env:ROMRAIDER_VERSION_FORK"
+    }
+    $versionProperties['version.fork'] = $env:ROMRAIDER_VERSION_FORK
+}
 foreach ($key in @('version.major', 'version.minor', 'version.patch', 'version.fork')) {
     if (-not $versionProperties.ContainsKey($key)) {
         Fail "$key is missing from version.properties"
