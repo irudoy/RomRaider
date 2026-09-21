@@ -65,9 +65,14 @@ an installed version.
 
 ## Runtime data
 
-Settings and definitions live in `%USERPROFILE%\.RomRaider`. Console output is
-appended to `%USERPROFILE%\.RomRaider\romraider_sout.log`, and the application
-log is written to `%USERPROFILE%\.RomRaider\rr_system.log`.
+Settings and definitions live in `%USERPROFILE%\.RomRaider`. The application
+log is written to `%USERPROFILE%\.RomRaider\rr_system.log` and records every
+uncaught exception together with its stack trace.
+
+Console output is appended to `%USERPROFILE%\.RomRaider\romraider_sout.log`.
+`run.bat` redirects it there. The installer shortcuts start `javaw.exe`, which
+has no console, and pass `-Dromraider.consoleLog=true`, so the application
+writes that file itself.
 
 The 3D table view runs on JogAmp Java3D 1.7.2 with the JOGL 2.6.0 natives for
 `windows-amd64`, both carried in `lib\common`. No separate Java3D or OpenGL

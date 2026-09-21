@@ -21,13 +21,53 @@ package com.romraider.util;
 
 import static org.apache.log4j.PropertyConfigurator.configureAndWatch;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.PrintStream;
+
+import org.apache.log4j.Logger;
+
 public final class LogManager {
+
+    /**
+     * Set to true by launchers that start the JVM without a console, such as
+     * the Windows installer shortcuts running javaw.exe, so that the console
+     * output of the application still reaches romraider_sout.log.
+     */
+    public static final String CONSOLE_LOG_PROPERTY = "romraider.consoleLog";
+
+    private static final String CONSOLE_LOG_FILE = "romraider_sout.log";
 
     private LogManager() {
         throw new UnsupportedOperationException();
     }
 
     public static void initDebugLogging() {
+        // The log4j console appender binds to System.out while it is
+        // configured, so the console is redirected first.
+        if (Boolean.getBoolean(CONSOLE_LOG_PROPERTY)) {
+            redirectConsole();
+        }
         configureAndWatch("lib/log4j.properties");
+        Thread.setDefaultUncaughtExceptionHandler((thread, error) ->
+                Logger.getLogger(LogManager.class).error(
+                        "Uncaught exception in thread " + thread.getName(),
+                        error));
+    }
+
+    private static void redirectConsole() {
+        File directory = new File(System.getProperty("user.home"), ".RomRaider");
+        if (!directory.isDirectory() && !directory.mkdirs()) {
+            return;
+        }
+        try {
+            PrintStream console = new PrintStream(new FileOutputStream(
+                    new File(directory, CONSOLE_LOG_FILE), true), true);
+            System.setOut(console);
+            System.setErr(console);
+        } catch (FileNotFoundException e) {
+            System.err.println("Unable to write " + CONSOLE_LOG_FILE + ": " + e);
+        }
     }
 }

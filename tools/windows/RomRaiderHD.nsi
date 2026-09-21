@@ -35,7 +35,7 @@ Unicode true
   !error "LICENSEFILE is undefined"
 !endif
 
-!define JVM_ARGS "-Djava.library.path=lib\windows\64 -Dawt.useSystemAAFontSettings=lcd -Dswing.aatext=true -Dsun.java2d.d3d=true -Xms64M -Xmx512M"
+!define JVM_ARGS "-Dromraider.consoleLog=true -Djava.library.path=lib\windows\64 -Dawt.useSystemAAFontSettings=lcd -Dswing.aatext=true -Dsun.java2d.d3d=true -Xms64M -Xmx512M"
 !define JAVAW "$INSTDIR\runtime\bin\javaw.exe"
 !define UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}"
 
