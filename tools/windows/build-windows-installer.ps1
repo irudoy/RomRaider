@@ -92,6 +92,56 @@ function Read-JavaProperty {
     return $match.Matches[0].Groups[1].Value
 }
 
+function Remove-Windows10Compatibility {
+    param(
+        [Parameter(Mandatory = $true)] [string] $Launcher
+    )
+
+    # The Intel HD Graphics 2000 and 3000 drivers do not support Windows 10
+    # and give a process that declares Windows 10 compatibility only the
+    # OpenGL 1.1 software renderer, which Java3D rejects. The Windows 10 entry
+    # of the launcher manifest is blanked in place, which keeps the layout of
+    # the executable, and the Authenticode signature it invalidates is removed.
+    $bytes = [System.IO.File]::ReadAllBytes($Launcher)
+    $text = [System.Text.Encoding]::GetEncoding(28591).GetString($bytes)
+    $entry = '<supportedOS Id="{8e0f7a12-bfb3-4fe8-b9a5-48fd50a15a9a}"></supportedOS>'
+    $index = $text.IndexOf($entry, [System.StringComparison]::Ordinal)
+    if ($index -lt 0 -or
+            $text.IndexOf($entry, $index + 1, [System.StringComparison]::Ordinal) -ge 0) {
+        Fail "$Launcher does not declare Windows 10 compatibility exactly once"
+    }
+    for ($i = 0; $i -lt $entry.Length; $i++) {
+        $bytes[$index + $i] = 0x20
+    }
+
+    $peHeader = [System.BitConverter]::ToInt32($bytes, 0x3C)
+    $optionalHeader = $peHeader + 24
+    if ([System.BitConverter]::ToUInt32($bytes, $peHeader) -ne 0x4550 -or
+            [System.BitConverter]::ToUInt16($bytes, $optionalHeader) -ne 0x20B) {
+        Fail "$Launcher is not a 64-bit PE executable"
+    }
+    # IMAGE_DIRECTORY_ENTRY_SECURITY holds the file offset of the signature
+    $securityEntry = $optionalHeader + 112 + 4 * 8
+    $signatureOffset = [System.BitConverter]::ToUInt32($bytes, $securityEntry)
+    $signatureSize = [System.BitConverter]::ToUInt32($bytes, $securityEntry + 4)
+    $length = $bytes.Length
+    if ($signatureSize -ne 0) {
+        if ([long] $signatureOffset + $signatureSize -ne $bytes.Length) {
+            Fail "the signature of $Launcher does not end the file"
+        }
+        $length = [int] $signatureOffset
+        [System.Array]::Clear($bytes, $securityEntry, 8)
+        [System.Array]::Clear($bytes, $optionalHeader + 64, 4)
+    }
+
+    $stream = [System.IO.File]::Open($Launcher, [System.IO.FileMode]::Create)
+    try {
+        $stream.Write($bytes, 0, $length)
+    } finally {
+        $stream.Dispose()
+    }
+}
+
 if ($PSVersionTable.PSVersion.Major -ge 6 -and -not $IsWindows) {
     Fail 'Windows is required'
 }
@@ -262,6 +312,7 @@ try {
         if (-not (Test-Path -LiteralPath $launcher)) {
             Fail "jlink produced no $launcher"
         }
+        Remove-Windows10Compatibility -Launcher $launcher
     }
 
     $runtimeSettings = Get-JavaSettings -JavaExe $bundledJava

@@ -15,7 +15,8 @@ tools\windows\build-windows-installer.ps1
 ```
 
 The script runs `ant standalone`, stages the Windows package, links a Java
-runtime with `jlink`, and compiles `tools/windows/RomRaiderHD.nsi`. The setup
+runtime with `jlink`, removes the Windows 10 entry from the manifest of its
+launchers, and compiles `tools/windows/RomRaiderHD.nsi`. The setup
 executable is written next to the standalone ZIP in `build\dist\windows` and
 carries the same version, for example `RomRaiderHD-1.1.0-hd.1-setup.exe`.
 
@@ -76,3 +77,13 @@ writes that file itself.
 The 3D table view runs on JogAmp Java3D 1.7.2 with the JOGL 2.6.0 natives for
 `windows-amd64`, both carried in `lib\common`. No separate Java3D or OpenGL
 installation is needed.
+
+The Intel HD Graphics 2000 and 3000 drivers do not support Windows 10 and give
+a process that declares Windows 10 compatibility only the OpenGL 1.1 software
+renderer, which Java3D rejects. The `java.exe` and `javaw.exe` of the bundled
+runtime therefore carry a manifest without the Windows 10 entry, so the 3D
+table view gets hardware OpenGL on these adapters too. The installer build
+removes the Authenticode signature of both launchers, which that manifest
+change invalidates. The standalone ZIP runs on the system Java, whose
+launchers keep the entry, so on these adapters its 3D table view does not
+work.
