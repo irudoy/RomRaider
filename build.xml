@@ -183,6 +183,7 @@
             <filter token="version.major" value="${version.major}" />
             <filter token="version.minor" value="${version.minor}" />
             <filter token="version.patch" value="${version.patch}" />
+            <filter token="version.full" value="${version.full}" />
             <filter token="version.buildnumber" value="${version.buildnumber}" />
             <filter token="version.extra" value="${version.extra}" />
             <filter token="version.extra1" value="${version.extra1}" />
@@ -496,7 +497,7 @@
     <macrodef name="macro_standalone">
         <attribute name="os" />
         <sequential>
-            <zip destfile="${dist.dir}/@{os}/${name.package}${version.major}.${version.minor}.${version.patch}${version.extra}${version.extra1}-@{os}.zip">
+            <zip destfile="${dist.dir}/@{os}/${name.package}-${version.full}-@{os}.zip">
                 <zipfileset file="${build.dir}/@{os}/package/${jar.package}" prefix="${name.package}" />
                 <zipfileset file="scripts/run.${ext.@{os}}" prefix="${name.package}" filemode="755" />
                 <zipfileset file="license.txt" prefix="${name.package}" />

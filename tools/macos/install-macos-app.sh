@@ -204,10 +204,13 @@ version_minor="$(/usr/bin/awk -F= \
 version_patch="$(/usr/bin/awk -F= \
 	'$1 == "version.patch" { print $2 }' \
 	"${source_dir}/version.properties")"
-version_build="$(/usr/bin/awk -F= \
-	'$1 == "version.buildnumber" { print $2 }' \
+version_fork="$(/usr/bin/awk -F= \
+	'$1 == "version.fork" { print $2 }' \
 	"${source_dir}/version.properties")"
 short_version="${version_major}.${version_minor}.${version_patch}"
+full_version="${short_version}-hd.${version_fork}"
+[[ "${full_version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+-hd\.[0-9]+$ ]] ||
+	fail "version.properties yields an invalid version: ${full_version}"
 
 extract_dir="${stage_dir}/extract"
 new_app="${stage_dir}/RomRaiderHD.app"
@@ -342,7 +345,7 @@ graph3d_signature="${stage_dir}/graph3d-signature.txt"
 	-c "Set :CFBundleShortVersionString ${short_version}" \
 	"${new_app}/Contents/Info.plist"
 /usr/libexec/PlistBuddy \
-	-c "Set :CFBundleVersion ${version_build}" \
+	-c "Set :CFBundleVersion ${version_fork}" \
 	"${new_app}/Contents/Info.plist"
 /usr/bin/plutil -lint "${new_app}/Contents/Info.plist" >/dev/null
 [[ "$(/usr/libexec/PlistBuddy \
@@ -376,8 +379,8 @@ fi
 /bin/mv "${new_app}" "${app_path}"
 installed=true
 
-printf 'Installed RomRaiderHD %s build %s at %s\n' \
-	"${short_version}" "${version_build}" "${app_path}"
+printf 'Installed RomRaiderHD %s at %s\n' \
+	"${full_version}" "${app_path}"
 
 if "${launch_app}"; then
 	/usr/bin/open "${app_path}"

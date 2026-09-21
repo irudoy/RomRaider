@@ -185,18 +185,19 @@ $setupPath = Join-Path $OutputDir $setupName
 $versionProperties = @{}
 Get-Content -LiteralPath (Join-Path $SourceDir 'version.properties') |
     ForEach-Object {
-        if ($_ -match '^\s*(version\.(?:major|minor|patch|buildnumber))\s*=\s*(\S+)\s*$') {
+        if ($_ -match '^\s*(version\.(?:major|minor|patch|fork))\s*=\s*(\d+)\s*$') {
             $versionProperties[$Matches[1]] = $Matches[2]
         }
     }
-foreach ($key in @('version.major', 'version.minor', 'version.patch', 'version.buildnumber')) {
+foreach ($key in @('version.major', 'version.minor', 'version.patch', 'version.fork')) {
     if (-not $versionProperties.ContainsKey($key)) {
         Fail "$key is missing from version.properties"
     }
 }
-$appVersion = '{0}.{1}.{2}' -f $versionProperties['version.major'],
+$baseVersion = '{0}.{1}.{2}' -f $versionProperties['version.major'],
     $versionProperties['version.minor'], $versionProperties['version.patch']
-$appVersion4 = '{0}.{1}' -f $appVersion, $versionProperties['version.buildnumber']
+$appVersion = '{0}-hd.{1}' -f $baseVersion, $versionProperties['version.fork']
+$appVersion4 = '{0}.{1}' -f $baseVersion, $versionProperties['version.fork']
 
 $stageDir = Join-Path $env:TEMP ('romraiderhd-installer-' + [guid]::NewGuid().ToString('N'))
 $extractDir = Join-Path $stageDir 'extract'
@@ -285,8 +286,7 @@ try {
         Fail "makensis produced no $setupPath"
     }
     $setupSize = [math]::Round((Get-Item -LiteralPath $setupPath).Length / 1MB, 1)
-    Write-Host ("Built RomRaiderHD {0} build {1}" -f $appVersion,
-        $versionProperties['version.buildnumber'])
+    Write-Host "Built RomRaiderHD $appVersion"
     Write-Host "Installer: $setupPath ($setupSize MB)"
 } finally {
     Remove-Item -LiteralPath $stageDir -Recurse -Force -ErrorAction SilentlyContinue

@@ -17,8 +17,7 @@ tools\windows\build-windows-installer.ps1
 The script runs `ant standalone`, stages the Windows package, links a Java
 runtime with `jlink`, and compiles `tools/windows/RomRaiderHD.nsi`. The setup
 executable is written next to the standalone ZIP in `build\dist\windows` and
-carries the same version stamp, for example
-`RomRaiderHD1.1.0SEP212026-setup.exe`.
+carries the same version, for example `RomRaiderHD-1.1.0-hd.1-setup.exe`.
 
 An existing standalone build can be packaged without recompilation:
 
